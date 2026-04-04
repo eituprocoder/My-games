@@ -15,10 +15,13 @@
         #controls-right { display: none; position: absolute; bottom: 30px; right: 30px; flex-direction: column; gap: 10px; align-items: center; z-index: 20; }
         
         .btn { width: 60px; height: 60px; background: rgba(255, 255, 0, 0.2); border: 2px solid #ffff00; border-radius: 10px; color: #ffff00; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; -webkit-tap-highlight-color: transparent; cursor: pointer; }
-        #btnJump { background: rgba(0, 255, 0, 0.3); border-color: #00ff00; color: #00ff00; width: 130px; }
+        #btnCamera { background: rgba(100, 100, 255, 0.3); border-color: #6464ff; color: #6464ff; }
+        #btnJump { background: rgba(0, 255, 0, 0.3); border-color: #00ff00; color: #00ff00; }
+        #btnDash { background: rgba(255, 100, 0, 0.3); border-color: #ff6400; color: #ff6400; }
         
         .menu-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,4,17,0.95); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; z-index: 100; color: white; text-align: center; overflow-y: auto; padding-top: 40px; padding-bottom: 40px;}
-        h1 { color: #ffff00; text-shadow: 0 0 10px #ffff00; font-size: 3em; margin-bottom: 10px; margin-top: 0;}
+        h1 { color: #ffff00; text-shadow: 0 0 10px #ffff00; font-size: 3em; margin-bottom: 5px; margin-top: 0;}
+        #trophy-display { color: #ffff00; font-size: 18px; margin-bottom: 10px; text-shadow: 0 0 5px #ffaa00; font-weight: bold; }
         
         .color-picker { display: flex; gap: 10px; margin: 10px 0; justify-content: center;}
         .color-btn { width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; cursor: pointer; transition: transform 0.2s; }
@@ -53,7 +56,7 @@
         @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-50px) scale(1.5); } }
 
         /* Chat UI */
-        #chat-container { display: none; position: absolute; bottom: 150px; right: 10px; width: 250px; background: rgba(0,0,0,0.6); border: 2px solid #00f2ff; border-radius: 10px; z-index: 20; flex-direction: column; }
+        #chat-container { display: none; position: absolute; top: 80px; left: 10px; width: 250px; background: rgba(0,0,0,0.6); border: 2px solid #00f2ff; border-radius: 10px; z-index: 20; flex-direction: column; }
         #chat-history { height: 100px; overflow-y: auto; color: white; font-size: 12px; padding: 5px; display: flex; flex-direction: column; gap: 2px; text-align: left; }
         #chat-input-area { display: flex; border-top: 1px solid #00f2ff; }
         #chat-input { flex-grow: 1; background: transparent; border: none; color: #ffff00; padding: 5px; font-family: inherit; outline: none; }
@@ -81,13 +84,12 @@
         <div class="modal-content">
             <h2>HOW TO PLAY</h2>
             <ul>
-                <li><span>Movement:</span> Use the left joystick. Right buttons rotate camera and jump.</li>
-                <li><span>Ghosts:</span> Avoid them! Touching them costs a life. You will respawn in 3s if you have lives left.</li>
-                <li><span>Co-op / Single:</span> Clear dots to win. It auto-advances to the next level.</li>
-                <li><span>PVP Mode:</span> Last Pac-Man standing wins.</li>
-                <li><span>Team PVP:</span> 4 Teams of 2! Your Pac-Man color determines your team. Don't hit your teammates!</li>
-                <li><span>Boss Rush (100 Levels):</span> Defeat 100 bosses in a row! Eat power pellets to damage the Boss by ramming it! Beware of their 8 special attacks!</li>
-                <li><span>Pac-Dog (Tuky):</span> Equip him in the menu! He passively barks every 15s to stun nearby ghosts.</li>
+                <li><span>Movement:</span> Left joystick. Right buttons rotate, jump, and DASH! Switch CAM to 1st Person for immersion!</li>
+                <li><span>Ghosts:</span> Avoid them! Touching them costs a life.</li>
+                <li><span>Co-op / Single:</span> Clear dots to win. Dead teammates revive with 1 life next round!</li>
+                <li><span>PVP & Comp PVP:</span> Last Pac-Man standing wins. Earn Trophies in Competitive! Beware the Glitch 256 when time is up!</li>
+                <li><span>Boss Rush (100 Levels):</span> Defeat 100 bosses in a row! Eat power pellets to ram them.</li>
+                <li><span>Pac-Dog:</span> Equip him in the menu! He passively barks every 15s to stun nearby ghosts.</li>
             </ul>
             <center><button class="action-btn" id="btn-close-tutorial" style="width: 150px;">CLOSE</button></center>
         </div>
@@ -107,9 +109,10 @@
             </div>
             <div id="editor-grid"></div>
             
-            <div style="display:flex; justify-content:center; gap: 10px; flex-wrap:wrap; margin-top: 10px;">
+            <div style="display:flex; justify-content:center; gap: 10px; flex-wrap:wrap; margin-top: 10px; align-items: center;">
                 <div>Mode: <select id="editor-mode" style="background:#000;color:#00f2ff;border:1px solid #00f2ff;"><option value="single">Single</option><option value="coop">Co-Op</option><option value="pvp">PVP</option></select></div>
                 <div>Time: <input type="number" id="editor-time" value="180" style="width:60px;background:#000;color:#00f2ff;border:1px solid #00f2ff;">s</div>
+                <div>Wall Color: <input type="color" id="editor-wall-color" value="#0033ff" style="background:#000; border:1px solid #00f2ff;"></div>
                 <div>Music: <input type="file" id="editor-music" accept="audio/*" style="width:150px; font-size:10px;"></div>
             </div>
             
@@ -126,7 +129,7 @@
 
     <div id="start-screen" class="menu-screen">
         <h1>PAC-MAN 3D</h1>
-        <h3>ULTIMATE EDITION</h3>
+        <div id="trophy-display">🏆 Trophies: <span id="my-trophies">0</span></div>
         
         <input type="text" id="player-name" class="input-field" placeholder="ENTER NICKNAME" maxlength="12" style="margin-bottom: 10px; border-color: #ffff00;">
 
@@ -135,9 +138,9 @@
             <button class="action-btn" id="btn-workshop" style="background: #ff00ff; width: 45%; padding: 10px; font-size: 12px; color: white;">WORKSHOP</button>
         </div>
 
-        <button class="action-btn" id="btn-toggle-dog" style="background: #ddaa00; width: 250px; padding: 10px; font-size: 12px;">PAC-DOG (TUKY): ON</button>
+        <button class="action-btn" id="btn-toggle-dog" style="background: #ddaa00; width: 250px; padding: 10px; font-size: 12px;">PAC-DOG: ON</button>
 
-        <p style="font-size: 14px; margin-bottom: 5px;">COLOR / TEAM:</p>
+        <p style="font-size: 14px; margin-bottom: 5px;">COLOR:</p>
         <div class="color-picker" id="color-picker">
             <div class="color-btn selected" style="background: #ffff00;" data-color="0xffff00"></div>
             <div class="color-btn" style="background: #ff0000;" data-color="0xff0000"></div>
@@ -158,12 +161,14 @@
             <button class="action-btn" id="btn-host-pvp" style="background: #ff5500; width: 48%; padding: 12px 5px; font-size: 12px; color: white;">HOST PVP</button>
         </div>
 
-        <div style="display: flex; gap: 5px; width: 250px; justify-content: space-between; margin-top: 5px;">
-            <button class="action-btn" id="btn-host-pvp-team" style="background: #aa00ff; width: 48%; padding: 12px 5px; font-size: 12px; color: white;">TEAM PVP (8P)</button>
-            <button class="action-btn" id="btn-host-boss" style="background: #ff0000; width: 48%; padding: 12px 5px; font-size: 12px; color: white;">BOSS RUSH</button>
+        <div style="display: flex; gap: 5px; width: 250px; justify-content: center; margin-top: 5px;">
+            <button class="action-btn" id="btn-host-comp" style="background: #ffaa00; width: 100%; padding: 12px 5px; font-size: 12px; color: black;">HOST COMP PVP (🏆)</button>
         </div>
 
-        <button class="action-btn" id="btn-house" style="background: #00ff00; width: 250px; padding: 12px 5px; font-size: 12px; color: black; margin-top: 5px;">PAC-HOUSE</button>
+        <div style="display: flex; gap: 5px; width: 250px; justify-content: space-between; margin-top: 5px;">
+            <button class="action-btn" id="btn-host-boss" style="background: #ff0000; width: 48%; padding: 12px 5px; font-size: 12px; color: white;">BOSS RUSH</button>
+            <button class="action-btn" id="btn-house" style="background: #00ff00; width: 48%; padding: 12px 5px; font-size: 12px; color: black;">PAC-HOUSE</button>
+        </div>
         
         <input type="text" id="join-id" class="input-field" placeholder="ROOM ID" style="margin-top: 15px;">
         <button class="action-btn" id="btn-join" style="background: #ff00ff;">JOIN ROOM</button>
@@ -176,6 +181,13 @@
         <p style="font-size: 1.5em; color: #00f2ff;">ROOM ID: <span id="lobby-id" style="color: #ffff00; font-weight: bold;">Generating...</span></p>
         <div id="qrcode-container" style="background: white; padding: 10px; border-radius: 10px; margin: 10px auto; display: none; align-items: center; justify-content: center; width: 128px; height: 128px;"></div>
         <p style="font-size: 1.2em; margin-top: 20px;">PLAYERS: <span id="lobby-count">1</span>/<span id="lobby-max">4</span></p>
+        
+        <div id="host-options" style="display:none; margin-top: 15px; margin-bottom: 15px; border: 1px solid #00f2ff; padding: 10px; border-radius: 10px; background: rgba(0,0,0,0.5);">
+            <label style="color: #00f2ff; font-size: 16px; cursor: pointer; font-weight: bold;">
+                <input type="checkbox" id="cb-chat-enable" checked style="transform: scale(1.5); margin-right: 10px;"> ENABLE IN-GAME CHAT
+            </label>
+        </div>
+
         <p id="lobby-waiting-msg" style="color: #ff00ff; display: none; font-weight: bold; animation: blink 1s infinite;">Waiting for host...</p>
         <button class="action-btn" id="btn-lobby-start" style="background: #00ff00; display: none;">START GAME</button>
         <button class="action-btn" id="btn-lobby-leave" style="background: #ff0000; color: white; margin-top: 20px;">LEAVE LOBBY</button>
@@ -227,7 +239,11 @@
 
     <div id="joystick-container"><div id="joystick-knob"></div></div>
     <div id="controls-right">
-        <div id="btnJump" class="btn">JUMP</div>
+        <div style="display: flex; gap: 10px;">
+            <div id="btnCamera" class="btn" style="width: 80px; font-size: 14px;">CAM: 3RD</div>
+            <div id="btnJump" class="btn" style="width: 80px; font-size: 14px;">JUMP</div>
+            <div id="btnDash" class="btn" style="width: 80px; font-size: 14px;">DASH</div>
+        </div>
         <div style="display: flex; gap: 5px;">
             <div class="btn" id="rotLeft">↺</div>
             <div style="display: flex; flex-direction: column; gap: 5px;">
@@ -245,18 +261,26 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // --- UI & Workshop Logic ---
+        // --- UI & Trophies Logic ---
+        let myTrophies = parseInt(localStorage.getItem('pacman_trophies') || '0');
+        document.getElementById('my-trophies').innerText = myTrophies;
+
         document.getElementById('btn-tutorial').onclick = () => { document.getElementById('tutorial-modal').style.display = 'flex'; };
         document.getElementById('btn-close-tutorial').onclick = () => { document.getElementById('tutorial-modal').style.display = 'none'; };
         document.getElementById('btn-workshop').onclick = () => { document.getElementById('workshop-modal').style.display = 'flex'; };
         document.getElementById('btn-close-workshop').onclick = () => { document.getElementById('workshop-modal').style.display = 'none'; };
 
         let dogEquipped = true;
+        let chatEnabled = true;
+        let isFirstPerson = false;
+        let currentMapData = null;
+
         document.getElementById('btn-toggle-dog').onclick = () => {
             dogEquipped = !dogEquipped;
-            document.getElementById('btn-toggle-dog').innerText = `PAC-DOG (TUKY): ${dogEquipped ? 'ON' : 'OFF'}`;
+            document.getElementById('btn-toggle-dog').innerText = `PAC-DOG: ${dogEquipped ? 'ON' : 'OFF'}`;
         };
 
+        // --- Editor Data ---
         let currentTool = 1;
         let editorGrid = new Array(225).fill(0);
         for(let i=0; i<15; i++) { editorGrid[i]=1; editorGrid[210+i]=1; editorGrid[i*15]=1; editorGrid[i*15+14]=1; }
@@ -293,13 +317,14 @@
         };
 
         document.getElementById('btn-editor-export').onclick = () => {
-            const data = { g: editorGrid, m: document.getElementById('editor-mode').value, t: document.getElementById('editor-time').value, a: customAudioDataUrl };
+            const data = { g: editorGrid, m: document.getElementById('editor-mode').value, t: document.getElementById('editor-time').value, wc: document.getElementById('editor-wall-color').value, a: customAudioDataUrl };
             document.getElementById('editor-code').value = btoa(JSON.stringify(data));
         };
         document.getElementById('btn-editor-import').onclick = () => {
             try {
                 const data = JSON.parse(atob(document.getElementById('editor-code').value));
                 editorGrid = data.g; document.getElementById('editor-mode').value = data.m; document.getElementById('editor-time').value = data.t;
+                if(data.wc) document.getElementById('editor-wall-color').value = data.wc;
                 customAudioDataUrl = data.a || null; renderEditor();
             } catch(e) { alert("Invalid Code!"); }
         };
@@ -307,17 +332,17 @@
         // --- Multiplayer PeerJS ---
         let peer = null, peerConnections = [], hostConnection = null;
         let isMultiplayer = false, isHost = true;
-        let currentMode = 'single'; // single, coop, pvp, pvp-team, boss, house, custom
+        let currentMode = 'single'; // single, coop, pvp, comp-pvp, boss, house, custom
         let customSettings = null, myPeerId = 'local';
         let playerName = "Player";
         const otherPlayers = {}; 
         let activePvpPlayers = new Set();
         let globalAudioObj = null, bossMusicInterval = null;
 
-        const maxPlayersForMode = { 'single':1, 'coop':4, 'pvp':4, 'pvp-team':8, 'boss':10, 'house':10, 'custom':4 };
+        const maxPlayersForMode = { 'single':1, 'coop':4, 'pvp':4, 'comp-pvp':4, 'boss':10, 'house':200, 'custom':4 };
         
         // --- Emoji Reactions System ---
-        const allEmojis = ['🤩','😉','😅','😊','🤔','😭','😠','😡','🤫','👍','👎','👋','🙏','😐','🥹','🥳','😎','😱'];
+        const allEmojis = ['ᗧ','ᗣ','🍒','🍓','💊','👻','💀','🏆','👾','🌀'];
         let myEmojis = [];
         const emojiPicker = document.getElementById('emoji-picker');
         allEmojis.forEach(e => {
@@ -348,8 +373,15 @@
         let ghostKillCombo = 0, isRespawning = false, isDying = false;
         let respawnTimeLeft = 0, deathAnimProgress = 0, happyTimer = 0; 
         let dogAbilityTimer = 900;
+        let dashActive = 0, dashCooldown = 0;
         const killScores = [200, 400, 800, 1600, 2400, 3200, 4200];
         
+        // Glitch 256 PVP Muerte Subita variables
+        let glitchMode = false;
+        let glitchBounds = 30;
+        let glitchMeshLeft, glitchMeshRight;
+        let glitchAudioInterval;
+
         let moveF = 0, moveS = 0, isRotL = false, isRotR = false, isRotU = false, isRotD = false;
         let velocityY = 0, isJumping = false;
         let aimDir = new THREE.Vector3(0, 0, -1); 
@@ -420,8 +452,27 @@
         }
         let myDog = createDog();
 
+        // CÁMARA FIX - Local Space Restore System
         const cameraPivot = new THREE.Group(); playerGroup.add(cameraPivot);
         cameraPivot.add(camera); camera.position.set(0, 2, 5); camera.lookAt(0, 0, -5);
+        const defaultCamQuat = camera.quaternion.clone(); // Guarda la rotación perfecta local para la 3ra persona
+
+        document.getElementById('btnCamera').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if(!allowMovement) return;
+            isFirstPerson = !isFirstPerson;
+            document.getElementById('btnCamera').innerText = isFirstPerson ? "CAM: 1ST" : "CAM: 3RD";
+            playSfx(500, 0.1, 'sine');
+            
+            if(!isFirstPerson) {
+                // Restaura perfectamente la 3ra persona original sin que se bloquee apuntando al centro
+                cameraPivot.rotation.y = 0;
+                cameraPivot.position.set(0, 0, 0);
+                camera.position.set(0, 2, 5);
+                camera.quaternion.copy(defaultCamQuat);
+                pacmanModel.scale.set(1, 1, 1);
+            }
+        });
 
         function setExpression(model, expr) {
             if(!model || !model.lEye) return;
@@ -492,7 +543,7 @@
             const lE = new THREE.Mesh(eyeGeo, eyeMat); lE.position.set(0.25, 1.0, 0.5); const lP = new THREE.Mesh(pupilGeo, pupilMat); lP.position.set(0.25, 1.0, 0.62);
             const rE = new THREE.Mesh(eyeGeo, eyeMat); rE.position.set(-0.25, 1.0, 0.5); const rP = new THREE.Mesh(pupilGeo, pupilMat); rP.position.set(-0.25, 1.0, 0.62);
             group.add(lE, lP, rE, rP);
-            group.baseColor = config.color; group.aiType = config.ai; group.cornerX = config.cornerX; group.cornerZ = config.cornerZ; group.isDead = false; group.stunTimer = 0;
+            group.baseColor = config.color; group.aiType = config.ai; group.cornerX = config.cornerX; group.cornerZ = config.cornerZ; group.isDead = false; group.stunTimer = 0; group.isClone = false;
             return group;
         }
 
@@ -516,8 +567,8 @@
             setTimeout(() => { if(activeFruit && mapGroup) { mapGroup.remove(activeFruit); activeFruit = null; document.getElementById('fruit-indicator').style.display = 'none'; } }, 10000);
         }
 
-        function createWall(px, pz) {
-            const wall = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), new THREE.MeshPhongMaterial({ color: 0x0033ff }));
+        function createWall(px, pz, hexColor = 0x0033ff) {
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), new THREE.MeshPhongMaterial({ color: hexColor }));
             wall.position.set(px, 2, pz); mapGroup.add(wall); walls.push(new THREE.Box3().setFromObject(wall)); wallMeshes.push(wall);
         }
         function createDot(px, pz, type) {
@@ -531,12 +582,33 @@
             mapGroup.add(dot); dots.push(dot); remainingDots++;
         }
 
+        // Generate Map Sync Grid Data
+        function generateMapDataGrid(lvl) {
+            let grid = new Array(225).fill(0);
+            for(let i=0; i<15; i++) { grid[i]=1; grid[210+i]=1; grid[i*15]=1; grid[i*15+14]=1; }
+            grid[7*15+0] = 0; grid[7*15+14] = 0; 
+            for(let i=2; i<13; i+=2) for(let j=2; j<13; j+=2) {
+                if(i===6 || i===8 || j===6 || j===8) continue; 
+                grid[i*15+j] = 1; if(Math.random()>0.4){ if(Math.random()>0.5) grid[i*15+j+1]=1; else grid[(i+1)*15+j]=1; }
+            }
+            for(let ci=6; ci<=8; ci++) for(let cj=6; cj<=8; cj++) grid[ci*15+cj] = 0;
+            
+            for(let z=0; z<15; z++) for(let x=0; x<15; x++) {
+                if(grid[z*15+x] === 0 && !(z>=6 && z<=8 && x>=6 && x<=8)) {
+                    grid[z*15+x] = Math.random()<0.08 ? 3 : 2; // 3=power, 2=dot
+                }
+            }
+            return grid;
+        }
+
         function generateMap(level) {
             while(mapGroup.children.length > 0){ mapGroup.remove(mapGroup.children[0]); }
             walls = []; ghostWalls = []; wallMeshes = []; dots = []; ghosts = []; powerPellets = []; remainingDots = 0; theBoss = null;
             if(activeFruit) activeFruit = null;
 
             playerGroup.position.set(0, 1, 15);
+            let wColorStr = (customSettings && customSettings.wc) ? customSettings.wc : "#0033ff";
+            let defaultWallColor = parseInt(wColorStr.replace('#','0x'));
 
             if(currentMode === 'custom' && customSettings) {
                 let sIdx=0, fIdx=0;
@@ -544,7 +616,7 @@
                     for(let x=0; x<15; x++) {
                         let val = customSettings.g[z*15+x];
                         let px = (x-7)*4, pz = (z-7)*4;
-                        if(val===1) createWall(px, pz);
+                        if(val===1) createWall(px, pz, defaultWallColor);
                         if(val===2) createDot(px, pz, 0);
                         if(val===3) createDot(px, pz, 2);
                         if(val===4) { let g=createGhost(ghostTypes[ghosts.length%8]); g.position.set(px,0,pz); mapGroup.add(g); ghosts.push(g); }
@@ -553,12 +625,12 @@
                     }
                 }
             } else if (currentMode === 'house') {
-                for(let i=0; i<15; i++) { createWall((i-7)*4, -28); createWall((i-7)*4, 28); createWall(-28, (i-7)*4); createWall(28, (i-7)*4); }
+                for(let i=0; i<15; i++) { createWall((i-7)*4, -28, defaultWallColor); createWall((i-7)*4, 28, defaultWallColor); createWall(-28, (i-7)*4, defaultWallColor); createWall(28, (i-7)*4, defaultWallColor); }
                 const couch = new THREE.Mesh(new THREE.BoxGeometry(8,2,4), new THREE.MeshPhongMaterial({color: 0xaa2222})); couch.position.set(0,1,-10); mapGroup.add(couch);
                 const tv = new THREE.Mesh(new THREE.BoxGeometry(6,4,1), new THREE.MeshPhongMaterial({color: 0x2222aa})); tv.position.set(0,3,-20); mapGroup.add(tv);
                 walls.push(new THREE.Box3().setFromObject(couch)); walls.push(new THREE.Box3().setFromObject(tv));
             } else if (currentMode === 'boss') {
-                for(let i=0; i<15; i++) { createWall((i-7)*4, -28); createWall((i-7)*4, 28); createWall(-28, (i-7)*4); createWall(28, (i-7)*4); }
+                for(let i=0; i<15; i++) { createWall((i-7)*4, -28, defaultWallColor); createWall((i-7)*4, 28, defaultWallColor); createWall(-28, (i-7)*4, defaultWallColor); createWall(28, (i-7)*4, defaultWallColor); }
                 createDot(-20, -20, 2); createDot(20, -20, 2); createDot(-20, 20, 2); createDot(20, 20, 2);
                 theBoss = createGhost({ai:'chase', color: bossColors[(level-1)%3], cornerX:0, cornerZ:0});
                 theBoss.scale.set(4,4,4); theBoss.position.set(0,0,0); 
@@ -566,39 +638,30 @@
                 mapGroup.add(theBoss);
                 bossMaxHp = 10 + (level*5); bossHp = bossMaxHp;
             } else {
-                const mapData = Array(15).fill(0).map(()=>Array(15).fill(0));
-                for(let i=0; i<15; i++) { mapData[0][i] = mapData[14][i] = mapData[i][0] = mapData[i][14] = 1; }
-                mapData[7][0] = mapData[7][14] = 0; 
-                for(let i=2; i<13; i+=2) for(let j=2; j<13; j+=2) {
-                    if(i===6 || i===8 || j===6 || j===8) continue; 
-                    mapData[i][j] = 1; if(Math.random()>0.4){ if(Math.random()>0.5) mapData[i][j+1]=1; else mapData[i+1][j]=1; }
-                }
-                for(let ci=6; ci<=8; ci++) for(let cj=6; cj<=8; cj++) mapData[ci][cj] = 0;
-
-                for(let z=0; z<15; z++) for(let x=0; x<15; x++) {
-                    const pos = [(x-7)*4, (z-7)*4];
-                    if (mapData[z][x] === 1) createWall(pos[0], pos[1]);
-                    else if (!(z>=6 && z<=8 && x>=6 && x<=8)) createDot(pos[0], pos[1], Math.random()<0.08?2:0);
+                let grid = currentMapData;
+                for(let z=0; z<15; z++) {
+                    for(let x=0; x<15; x++) {
+                        let val = grid[z*15+x];
+                        let px = (x-7)*4, pz = (z-7)*4;
+                        if(val === 1) createWall(px, pz, defaultWallColor);
+                        else if(val === 2) createDot(px, pz, 0);
+                        else if(val === 3) createDot(px, pz, 2);
+                    }
                 }
 
                 const ghBox = new THREE.Mesh(new THREE.BoxGeometry(12,4,12), new THREE.MeshPhongMaterial({color:0xff0000, transparent:true, opacity:0.15, wireframe:true}));
                 ghBox.position.set(-2, 2, -2); mapGroup.add(ghBox); ghostWalls.push(new THREE.Box3().setFromObject(ghBox));
 
-                const numGhosts = (currentMode === 'pvp' || currentMode === 'pvp-team') ? 4 : Math.min(8, 1 + Math.floor(level/2)); 
+                const numGhosts = (currentMode === 'pvp' || currentMode === 'comp-pvp') ? 4 : Math.min(8, 1 + Math.floor(level/2)); 
                 for(let i=0; i<numGhosts; i++) {
-                    const g = createGhost(ghostTypes[i%ghostTypes.length]); g.position.set((Math.random()-0.5)*4, 0, (Math.random()-0.5)*4); 
+                    const g = createGhost(ghostTypes[i%ghostTypes.length]); 
+                    g.position.set((i%3 - 1)*2, 0, (Math.floor(i/3) - 1)*2); // fixed map spawn
                     mapGroup.add(g); ghosts.push(g);
                 }
             }
 
             playerGroup.rotation.set(0, 0, 0); cameraPivot.rotation.set(0, 0, 0); pacmanModel.rotation.set(0, Math.PI, 0); aimDir.set(0,0,-1);
             document.getElementById('remaining').innerText = remainingDots; document.getElementById('level-disp').innerText = level;
-            
-            if(isHost) {
-                let dMsg = { seed: level, mode: currentMode };
-                if(currentMode==='custom') { dMsg.cData = customSettings; }
-                broadcastState('mapData', dMsg); 
-            }
         }
 
         function resetPowerups() { powerUp = false; ghostKillCombo = 0; happyTimer = 0; pacSpeedBoost = 0; document.getElementById('powerBarContainer').style.display = 'none'; }
@@ -614,6 +677,30 @@
             }, 120); 
         }
 
+        function startGlitchMode() {
+            glitchMode = true;
+            glitchBounds = 30;
+            const geo = new THREE.BoxGeometry(30, 10, 60);
+            const mat = new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe: true, transparent: true, opacity: 0.8});
+            if(!glitchMeshLeft) {
+                glitchMeshLeft = new THREE.Mesh(geo, mat);
+                glitchMeshRight = new THREE.Mesh(geo, mat);
+                scene.add(glitchMeshLeft); scene.add(glitchMeshRight);
+            }
+            glitchMeshLeft.visible = true; glitchMeshRight.visible = true;
+            
+            if(glitchAudioInterval) clearInterval(glitchAudioInterval);
+            let noteIdx = 0;
+            const notes = [150, 300, 150, 450, 100, 600, 100, 200];
+            glitchAudioInterval = setInterval(() => {
+                if(!glitchMode || !gameActive) { clearInterval(glitchAudioInterval); return; }
+                playSfx(notes[noteIdx % notes.length], 0.1, 'sawtooth');
+                noteIdx++;
+            }, 100);
+            
+            showComboScore("GLITCH 256!", playerGroup.position);
+        }
+
         function startGame(level) {
             currentLevel = level; 
             if(currentLevel > 360 && (currentMode==='single'||currentMode==='coop')) { endGame("YOU BEAT THE FULL GAME!", true); return; }
@@ -627,9 +714,13 @@
                 btn.onclick = () => { triggerReaction(myPeerId, e); broadcastState('reaction', { id: myPeerId, emoji: e }); }; rUI.appendChild(btn);
             });
 
+            glitchMode = false;
+            if(glitchMeshLeft) { glitchMeshLeft.visible = false; glitchMeshRight.visible = false; }
+            if(glitchAudioInterval) clearInterval(glitchAudioInterval);
+
             generateMap(currentLevel); resetPowerups();
             isRespawning = false; document.getElementById('respawn-timer').style.display = 'none';
-            isDying = false; deathAnimProgress = 0; dogAbilityTimer = 900;
+            isDying = false; deathAnimProgress = 0; dogAbilityTimer = 900; dashActive = 0; dashCooldown = 0;
             if(currentLevel===1) { lives = (currentMode==='boss'||currentMode==='custom') ? 3 : lives; }
             if(currentMode==='house') lives=999;
             
@@ -647,7 +738,7 @@
             document.getElementById('bossBarContainer').style.display = currentMode==='boss' ? 'block' : 'none';
             document.getElementById('bossAttackAlert').style.display = 'none';
             
-            if(currentMode.includes('pvp')) { activePvpPlayers = new Set([myPeerId]); if(isHost) peerConnections.forEach(c => activePvpPlayers.add(c.peer)); }
+            if(currentMode === 'pvp' || currentMode === 'comp-pvp') { activePvpPlayers = new Set([myPeerId]); if(isHost) peerConnections.forEach(c => activePvpPlayers.add(c.peer)); }
             
             if(globalAudioObj) { globalAudioObj.pause(); globalAudioObj=null; }
             if(bossMusicInterval) clearInterval(bossMusicInterval);
@@ -658,7 +749,8 @@
             document.getElementById('start-screen').style.display = 'none'; document.getElementById('lobby-screen').style.display = 'none'; 
             document.getElementById('end-screen').style.display = 'none'; document.getElementById('workshop-modal').style.display = 'none';
             document.getElementById('ui').style.display = 'block'; document.getElementById('minimap').style.display = 'block';
-            document.getElementById('reactions-ui').style.display = 'flex'; document.getElementById('chat-container').style.display = 'flex';
+            document.getElementById('reactions-ui').style.display = 'flex'; 
+            document.getElementById('chat-container').style.display = (chatEnabled && isMultiplayer) ? 'flex' : 'none';
             document.getElementById('joystick-container').style.display = 'flex'; document.getElementById('controls-right').style.display = 'flex';
             if(isMultiplayer) document.getElementById('multiplayer-info').style.display = 'block';
             
@@ -693,18 +785,39 @@
 
                 if(!allowMovement || (isRespawning && respawnTimeLeft === 9999)) return;
 
-                if(currentMode!=='house') timeLeft--;
-                const m = Math.floor(timeLeft / 60), s = (timeLeft % 60).toString().padStart(2, '0');
-                document.getElementById('time').innerText = `${m}:${s}`;
+                if(currentMode!=='house' && !glitchMode) timeLeft--;
+                const m = Math.floor(Math.max(0, timeLeft) / 60), s = (Math.max(0, timeLeft) % 60).toString().padStart(2, '0');
+                document.getElementById('time').innerText = glitchMode ? "GLITCH" : `${m}:${s}`;
+                
                 if(!activeFruit && Math.random()<0.05 && remainingDots<dots.length/2 && !currentMode.includes('pvp') && currentMode!=='house' && currentMode!=='boss') spawnFruit();
-                if(timeLeft <= 0) endGame("TIME'S UP!", false);
+                
+                if(timeLeft <= 0) {
+                    if ((currentMode === 'pvp' || currentMode === 'comp-pvp') && !glitchMode) {
+                        startGlitchMode();
+                    } else if (currentMode !== 'pvp' && currentMode !== 'comp-pvp') {
+                        endGame("TIME'S UP!", false);
+                    }
+                }
             }, 1000);
         }
 
         function endGame(reason, victory) {
-            gameActive = false; allowMovement = false; moveF = 0; moveS = 0;
+            gameActive = false; allowMovement = false; moveF = 0; moveS = 0; glitchMode = false;
+            
+            // Regresar a 3ra persona automáticamente si estabas en 1ra persona al terminar
+            if(isFirstPerson) {
+                isFirstPerson = false;
+                document.getElementById('btnCamera').innerText = "CAM: 3RD";
+                cameraPivot.rotation.y = 0;
+                cameraPivot.position.set(0, 0, 0);
+                camera.position.set(0, 2, 5);
+                camera.quaternion.copy(defaultCamQuat);
+                pacmanModel.scale.set(1, 1, 1);
+            }
+
             if(globalAudioObj) { globalAudioObj.pause(); }
             if(bossMusicInterval) clearInterval(bossMusicInterval);
+            if(glitchAudioInterval) clearInterval(glitchAudioInterval);
             document.getElementById('ui').style.display = 'none'; document.getElementById('joystick-container').style.display = 'none';
             document.getElementById('controls-right').style.display = 'none'; document.getElementById('multiplayer-info').style.display = 'none';
             document.getElementById('reactions-ui').style.display = 'none'; document.getElementById('chat-container').style.display = 'none';
@@ -719,24 +832,21 @@
         }
 
         function checkPvpWinner() {
-            if(currentMode === 'pvp') {
+            if(currentMode === 'pvp' || currentMode === 'comp-pvp') {
                 if(activePvpPlayers.size === 1) { const wId = Array.from(activePvpPlayers)[0]; broadcastState('pvpEnd', { winner: wId }); handlePvpEnd(wId); } 
                 else if (activePvpPlayers.size === 0) { broadcastState('pvpEnd', { winner: null }); handlePvpEnd(null); }
-            } else if (currentMode === 'pvp-team') {
-                let aliveColors = new Set();
-                activePvpPlayers.forEach(pid => {
-                     if(pid === myPeerId) aliveColors.add(pacColor);
-                     else if(otherPlayers[pid]) aliveColors.add(otherPlayers[pid].color);
-                });
-                if(aliveColors.size <= 1) {
-                    let winningColor = aliveColors.size === 1 ? Array.from(aliveColors)[0] : null;
-                    broadcastState('pvpTeamEnd', { wColor: winningColor });
-                    handlePvpTeamEnd(winningColor);
-                }
             }
         }
-        function handlePvpEnd(winnerId) { if(winnerId === myPeerId) endGame("YOU WON THE PVP MATCH!", true); else endGame(winnerId ? "YOU WERE DEFEATED!" : "DRAW!", false); }
-        function handlePvpTeamEnd(wColor) { if(wColor === pacColor) endGame("YOUR TEAM WON!", true); else endGame(wColor ? "YOUR TEAM WAS DEFEATED!" : "DRAW!", false); }
+
+        function handlePvpEnd(winnerId) { 
+            if(winnerId === myPeerId) {
+                if(currentMode === 'comp-pvp') { myTrophies += 30; localStorage.setItem('pacman_trophies', myTrophies); document.getElementById('my-trophies').innerText = myTrophies; }
+                endGame("YOU WON THE PVP MATCH!", true); 
+            } else { 
+                if(currentMode === 'comp-pvp') { myTrophies = Math.max(0, myTrophies - 10); localStorage.setItem('pacman_trophies', myTrophies); document.getElementById('my-trophies').innerText = myTrophies; }
+                endGame(winnerId ? "YOU WERE DEFEATED!" : "DRAW!", false); 
+            } 
+        }
 
         function addScore(points) {
             score += points; if (score >= nextLifeScore) { lives++; nextLifeScore += 10000; playSfx(1500, 0.5, 'square'); document.getElementById('lives').innerText = lives; if(isMultiplayer) broadcastState('extraLife', {}); }
@@ -747,7 +857,12 @@
             btn.addEventListener('click', (e) => { document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected')); e.target.classList.add('selected'); pacColor = parseInt(e.target.getAttribute('data-color')); });
         });
 
-        document.getElementById('btn-single').onclick = () => { lives = 3; score = 0; isMultiplayer=false; currentMode='single'; playerName=document.getElementById('player-name').value||"Player"; startGame(1); };
+        document.getElementById('btn-single').onclick = () => { 
+            lives = 3; score = 0; isMultiplayer=false; currentMode='single'; 
+            playerName=document.getElementById('player-name').value||"Player"; 
+            currentMapData = generateMapDataGrid(1);
+            startGame(1); 
+        };
         
         document.getElementById('btn-end-exit').onclick = () => {
             lives = 3; score = 0; // REINICIAR VIDAS
@@ -757,7 +872,7 @@
         };
         document.getElementById('btn-editor-play').onclick = () => {
             lives = 3; score = 0;
-            playerName=document.getElementById('player-name').value||"Player"; customSettings = {g:editorGrid, m:document.getElementById('editor-mode').value, t:document.getElementById('editor-time').value, a:customAudioDataUrl};
+            playerName=document.getElementById('player-name').value||"Player"; customSettings = {g:editorGrid, m:document.getElementById('editor-mode').value, t:document.getElementById('editor-time').value, wc:document.getElementById('editor-wall-color').value, a:customAudioDataUrl};
             setupHostMode('custom');
         };
 
@@ -801,9 +916,9 @@
                 document.getElementById('respawn-timer').innerText = `SPECTATING...`; document.getElementById('respawn-timer').style.display = 'block';
                 if(isMultiplayer) {
                     broadcastState('playerEliminated', { id: myPeerId });
-                    if (isHost && currentMode.includes('pvp')) { activePvpPlayers.delete(myPeerId); checkPvpWinner(); }
+                    if (isHost && (currentMode === 'pvp' || currentMode === 'comp-pvp')) { activePvpPlayers.delete(myPeerId); checkPvpWinner(); }
                     else { checkCoopAllDead(); }
-                } else { if(!currentMode.includes('pvp')) endGame("OUT OF LIVES!", false); else endGame("YOU WERE DEFEATED", false); }
+                } else { if(currentMode !== 'pvp' && currentMode !== 'comp-pvp') endGame("OUT OF LIVES!", false); else endGame("YOU WERE DEFEATED", false); }
             } else {
                 isRespawning = true; respawnTimeLeft = 3; allowMovement = false;
                 document.getElementById('respawn-timer').innerText = `RESPAWNING IN 3s...`; document.getElementById('respawn-timer').style.display = 'block';
@@ -811,7 +926,15 @@
             }
         }
 
+        document.getElementById('btnDash').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if(dashCooldown <= 0 && allowMovement && !isDying) {
+                dashActive = 10; dashCooldown = 150; playSfx(800, 0.2, 'triangle');
+            }
+        });
+
         document.querySelectorAll('.btn').forEach(b => {
+            if(b.id === 'btnDash' || b.id === 'btnCamera') return;
             b.addEventListener('touchstart', (e) => { e.preventDefault(); if(!allowMovement) return; if(b.id === 'rotLeft') isRotL = true; if(b.id === 'rotRight') isRotR = true; if(b.id === 'rotUp') isRotU = true; if(b.id === 'rotDown') isRotD = true; if(b.id === 'btnJump' && !isJumping) { velocityY = 0.25; isJumping = true; playSfx(400, 0.2, 'square'); } });
             b.addEventListener('touchend', (e) => { e.preventDefault(); isRotL = isRotR = isRotU = isRotD = false; });
         });
@@ -856,17 +979,14 @@
                 let max = maxPlayersForMode[currentMode] || 4;
                 if(isHost && peerConnections.length < max-1) {
                     peerConnections.push(conn); updateLobbyCount(); setupConnEvents(conn);
-                    let dMsg = { seed: currentLevel, mode: currentMode };
-                    if(currentMode==='custom') dMsg.cData = customSettings;
-                    conn.on('open', () => conn.send({type:'mapData', data: dMsg}));
+                    // Map is synced on start for proper initialization
                 }
             });
         }
 
         function setupConnEvents(conn) {
             conn.on('data', msg => {
-                if(msg.type === 'mapData' && !isHost) { currentLevel = msg.data.seed; currentMode = msg.data.mode; if(msg.data.cData) customSettings = msg.data.cData; } 
-                else if(msg.type === 'pos') {
+                if(msg.type === 'pos') {
                     const pid = msg.data.id; if (!pid || pid === myPeerId) return; 
                     if(!otherPlayers[pid]) otherPlayers[pid] = createOtherPlayerMesh(msg.data.color);
                     const op = otherPlayers[pid]; op.position.set(msg.data.x, msg.data.y, msg.data.z); op.rotation.y = msg.data.ry; op.name = msg.data.n; op.lives = msg.data.lives; op.hasDog = msg.data.dog; op.color = msg.data.color;
@@ -879,20 +999,27 @@
                 else if(msg.type === 'eatDot' && isHost) {
                     const d = dots[msg.data.dIndex]; 
                     if(d && d.visible) {
-                        d.visible = false; if(d.pType !== 2 || !currentMode.includes('pvp')) remainingDots--; document.getElementById('remaining').innerText = remainingDots;
+                        d.visible = false; if(d.pType !== 2 || (!currentMode.includes('pvp'))) remainingDots--; document.getElementById('remaining').innerText = remainingDots;
                         if(currentMode.includes('pvp') && d.pType === 2) d.respawnTimer = 900;
                         if(currentMode === 'boss' && d.pType === 2) d.respawnTimer = 600;
                         if(currentMode.includes('pvp')) { let normalDotsLeft = dots.filter(x => x.pType === 0 && x.visible).length; if(normalDotsLeft === 0) { dots.forEach(x => { if(x.pType === 0) x.visible = true; }); broadcastState('respawnNormalDots', {}); } }
                         broadcastState('dotHide', { dIndex: msg.data.dIndex, rem: remainingDots });
                         
-                        if(remainingDots <= 0 && !currentMode.includes('pvp') && currentMode !== 'boss' && currentMode !== 'house') {
+                        if(remainingDots <= 0 && (!currentMode.includes('pvp')) && currentMode !== 'boss' && currentMode !== 'house') {
                             gameActive = false; allowMovement = false; moveF = 0; moveS = 0; showComboScore("LEVEL CLEARED! NEXT IN 3s...", playerGroup.position);
-                            broadcastState('coopNextLevel', {level: currentLevel + 1});
+                            if(['single', 'coop', 'pvp', 'comp-pvp'].includes(currentMode)) { currentMapData = generateMapDataGrid(currentLevel + 1); }
+                            broadcastState('coopNextLevel', {level: currentLevel + 1, grid: currentMapData});
+                            if (currentMode === 'coop' && lives <= 0) { lives = 1; document.getElementById('lives').innerText = lives; isDying=false; isRespawning=false;}
                             setTimeout(() => { startGame(currentLevel + 1); }, 3000);
                         }
                     }
                 } 
-                else if(msg.type === 'coopNextLevel' && !isHost) { gameActive = false; allowMovement = false; moveF = 0; moveS = 0; showComboScore("LEVEL CLEARED! NEXT IN 3s...", playerGroup.position); setTimeout(() => { startGame(msg.data.level); }, 3000); }
+                else if(msg.type === 'coopNextLevel' && !isHost) { 
+                    gameActive = false; allowMovement = false; moveF = 0; moveS = 0; showComboScore("LEVEL CLEARED! NEXT IN 3s...", playerGroup.position); 
+                    if (currentMode === 'coop' && lives <= 0) { lives = 1; document.getElementById('lives').innerText = lives; isDying=false; isRespawning=false;}
+                    if(msg.data.grid) currentMapData = msg.data.grid;
+                    setTimeout(() => { startGame(msg.data.level); }, 3000); 
+                }
                 else if(msg.type === 'ghostKilled' && isHost) { let g = ghosts[msg.data.index]; if(g && !g.isDead) { g.isDead = true; g.children[0].visible = false; } } 
                 else if(msg.type === 'bossHit' && isHost) { 
                     bossHp--; broadcastState('bossHp', {hp:bossHp}); 
@@ -906,6 +1033,7 @@
                 else if(msg.type === 'bossHp' && !isHost) { bossHp = msg.data.hp; }
                 else if(msg.type === 'bossNextLevel' && !isHost) { gameActive = false; allowMovement = false; moveF = 0; moveS = 0; showComboScore("BOSS DOWN! NEXT IN 3s...", playerGroup.position); setTimeout(() => { startGame(msg.data.level); }, 3000); }
                 else if(msg.type === 'bossDead' && !isHost) { endGame("BOSS RUSH COMPLETED!", true); }
+                else if(msg.type === 'glitchSync' && !isHost) { if(!glitchMode && currentMode.includes('pvp')) { startGlitchMode(); document.getElementById('time').innerText = "GLITCH"; } }
                 else if(msg.type === 'ghostSync' && !isHost) { msg.data.forEach((gd, i) => { if(ghosts[i]) { ghosts[i].position.set(gd.x, gd.y, gd.z); ghosts[i].lookAt(gd.tx, 0.6, gd.tz); ghosts[i].isDead = gd.isDead; if(gd.isDead) ghosts[i].children[0].visible = false; else ghosts[i].children[0].visible = true; } }); }
                 else if(msg.type === 'bossSync' && !isHost) { if(theBoss){ theBoss.position.set(msg.data.x, msg.data.y, msg.data.z); theBoss.lookAt(msg.data.tx, 0.6, msg.data.tz); } }
                 else if(msg.type === 'dotHide' && !isHost) { if(dots[msg.data.dIndex]) dots[msg.data.dIndex].visible = false; remainingDots = msg.data.rem; document.getElementById('remaining').innerText = remainingDots; } 
@@ -918,10 +1046,14 @@
                 else if(msg.type === 'playerEliminated') { if (isHost) { if(currentMode.includes('pvp')) {activePvpPlayers.delete(msg.data.id); checkPvpWinner(); } else { checkCoopAllDead(); } } } 
                 else if(msg.type === 'teamDefeated' && !isHost) { handleTeamDefeated(); }
                 else if(msg.type === 'pvpEnd' && !isHost) { handlePvpEnd(msg.data.winner); } 
-                else if(msg.type === 'pvpTeamEnd' && !isHost) { handlePvpTeamEnd(msg.data.wColor); }
                 else if(msg.type === 'extraLife') { lives++; document.getElementById('lives').innerText = lives; playSfx(1500, 0.5, 'square'); } 
                 else if(msg.type === 'lobbyUpdate' && !isHost) { document.getElementById('lobby-count').innerText = msg.data.count; document.getElementById('mp-count').innerText = msg.data.count; } 
-                else if(msg.type === 'startGameLobby' && !isHost) { currentLevel = msg.data.level; currentMode = msg.data.mode; startGame(currentLevel); } 
+                else if(msg.type === 'startGameLobby' && !isHost) { 
+                    currentLevel = msg.data.level; currentMode = msg.data.mode; chatEnabled = msg.data.chat; 
+                    if(msg.data.grid) currentMapData = msg.data.grid;
+                    if(msg.data.cData) customSettings = msg.data.cData;
+                    startGame(currentLevel); 
+                } 
                 else if(msg.type === 'playerLeft' && !isHost) { if(otherPlayers[msg.data.id]) { scene.remove(otherPlayers[msg.data.id]); scene.remove(otherPlayers[msg.data.id].dog); if(nameTags[msg.data.id]) document.body.removeChild(nameTags[msg.data.id]); if(nameTags[msg.data.id+'_dog']) document.body.removeChild(nameTags[msg.data.id+'_dog']); delete otherPlayers[msg.data.id]; } }
             });
             conn.on('close', () => {
@@ -937,12 +1069,13 @@
             document.getElementById('start-screen').style.display = 'none'; document.getElementById('lobby-screen').style.display = 'flex'; document.getElementById('workshop-modal').style.display = 'none';
             document.getElementById('lobby-mode-text').innerText = mode.toUpperCase() + " MODE"; document.getElementById('lobby-id').innerText = "Generating...";
             document.getElementById('qrcode-container').style.display = 'none'; document.getElementById('btn-lobby-start').style.display = 'block'; document.getElementById('lobby-waiting-msg').style.display = 'none';
+            document.getElementById('host-options').style.display = 'block';
             peerConnections = []; updateLobbyCount(); peer = new Peer(); setupPeerEvents(peer);
         }
 
         document.getElementById('btn-host-coop').onclick = () => setupHostMode('coop');
         document.getElementById('btn-host-pvp').onclick = () => setupHostMode('pvp');
-        document.getElementById('btn-host-pvp-team').onclick = () => setupHostMode('pvp-team');
+        document.getElementById('btn-host-comp').onclick = () => setupHostMode('comp-pvp');
         document.getElementById('btn-host-boss').onclick = () => setupHostMode('boss');
         document.getElementById('btn-house').onclick = () => setupHostMode('house');
 
@@ -952,13 +1085,26 @@
             playerName = document.getElementById('player-name').value || "Player"; isMultiplayer = true; isHost = false; 
             document.getElementById('start-screen').style.display = 'none'; document.getElementById('lobby-screen').style.display = 'flex';
             document.getElementById('lobby-mode-text').innerText = "JOINING..."; document.getElementById('lobby-id').innerText = hostId; document.getElementById('qrcode-container').style.display = 'none'; document.getElementById('btn-lobby-start').style.display = 'none'; document.getElementById('lobby-waiting-msg').style.display = 'block';
+            document.getElementById('host-options').style.display = 'none';
             peer = new Peer();
             peer.on('open', id => { myPeerId = id; hostConnection = peer.connect(hostId); setupConnEvents(hostConnection); hostConnection.on('open', () => { document.getElementById('mp-id').innerText = hostId; }); hostConnection.on('close', () => { document.getElementById('btn-end-exit').click(); }); });
         };
 
         document.getElementById('btn-lobby-leave').onclick = () => { lives = 3; score = 0; if(peer) { peer.destroy(); peer = null; } peerConnections = []; hostConnection = null; document.getElementById('lobby-screen').style.display = 'none'; document.getElementById('start-screen').style.display = 'flex'; };
 
-        document.getElementById('btn-lobby-start').onclick = () => { if (peerConnections.length >= 0) { broadcastState('startGameLobby', { level: 1, mode: currentMode }); startGame(1); } };
+        document.getElementById('btn-lobby-start').onclick = () => { 
+            if (peerConnections.length >= 0) { 
+                chatEnabled = document.getElementById('cb-chat-enable').checked; 
+                if(['single', 'coop', 'pvp', 'comp-pvp'].includes(currentMode)) {
+                    currentMapData = generateMapDataGrid(1);
+                }
+                let dMsg = { level: 1, mode: currentMode, chat: chatEnabled };
+                if (currentMapData) dMsg.grid = currentMapData;
+                if (currentMode === 'custom') dMsg.cData = customSettings;
+                broadcastState('startGameLobby', dMsg); 
+                startGame(1); 
+            } 
+        };
 
         function processDotConsumption(d, isLocalPlayer) {
             d.visible = false; if(d.pType !== 2 || !currentMode.includes('pvp')) { remainingDots--; }
@@ -978,7 +1124,9 @@
             if(remainingDots <= 0 && isLocalPlayer && !currentMode.includes('pvp') && currentMode !== 'boss' && currentMode !== 'house') {
                 gameActive = false; allowMovement = false; moveF = 0; moveS = 0; showComboScore("LEVEL CLEARED! NEXT IN 3s...", playerGroup.position);
                 if(isHost || !isMultiplayer) {
-                    if(isMultiplayer) broadcastState('coopNextLevel', {level: currentLevel + 1});
+                    if(['single', 'coop', 'pvp', 'comp-pvp'].includes(currentMode)) currentMapData = generateMapDataGrid(currentLevel + 1);
+                    if(isMultiplayer) broadcastState('coopNextLevel', {level: currentLevel + 1, grid: currentMapData});
+                    if (currentMode === 'coop' && lives <= 0) { lives = 1; document.getElementById('lives').innerText = lives; isDying=false; isRespawning=false;}
                     setTimeout(() => { startGame(currentLevel + 1); }, 3000);
                 }
             }
@@ -1000,7 +1148,7 @@
             if (isDying) {
                 deathAnimProgress += 0.05; topHalf.rotation.x = -Math.min(deathAnimProgress, Math.PI / 2); bottomHalf.rotation.x = Math.min(deathAnimProgress, Math.PI / 2); pacmanModel.rotation.y += 0.15; 
                 if (deathAnimProgress >= Math.PI / 2) {
-                    isDying = false; topHalf.visible = false; bottomHalf.visible = false; auraMesh.visible = false; playerGroup.position.set(0, 1, 15); pacSpeedBoost = 0; 
+                    isDying = false; topHalf.visible = false; bottomHalf.visible = false; auraMesh.visible = false; playerGroup.position.set(0, 1, 15); pacSpeedBoost = 0; dashActive = 0; 
                 }
             }
 
@@ -1022,7 +1170,8 @@
             if (happyTimer > 0) happyTimer--;
             if (targetAuraOp === 0 && !isDying) {
                 let ghostNear = ghosts.some(g => !g.isDead && g.position.distanceTo(playerGroup.position) < 6) || (theBoss && theBoss.position.distanceTo(playerGroup.position) < 8);
-                if(ghostNear) myExpr = 'scared'; else if(happyTimer > 0) myExpr = 'happy'; else myExpr = 'calm';
+                let playerNear = currentMode.includes('pvp') && Object.values(otherPlayers).some(op => !op.isDying && op.children[0].visible && op.timers && op.timers.p > 0 && op.position.distanceTo(playerGroup.position) < 8);
+                if(ghostNear || playerNear) myExpr = 'scared'; else if(happyTimer > 0) myExpr = 'happy'; else myExpr = 'calm';
             }
             auraMesh.material.color.setHex(targetAuraCol); auraMesh.material.opacity = targetAuraOp; setExpression(pacmanModel, myExpr);
 
@@ -1038,6 +1187,22 @@
                 }
             }
 
+            // Glitch Muerte Subita update
+            if(glitchMode && allowMovement) {
+                glitchBounds -= 0.02;
+                if(glitchMeshLeft && glitchMeshRight) {
+                    glitchMeshLeft.position.set(-glitchBounds - 15, 2, 0);
+                    glitchMeshRight.position.set(glitchBounds + 15, 2, 0);
+                }
+                if(playerGroup.position.x > glitchBounds || playerGroup.position.x < -glitchBounds) {
+                    if(!isDying && topHalf.visible) {
+                        lives = 0; // INSTANT DEATH
+                        killPlayer();
+                    }
+                }
+                if(isHost) broadcastState('glitchSync', {});
+            }
+
             // Floating UIs
             for (let id in activeReactions) {
                 let r = activeReactions[id];
@@ -1050,11 +1215,11 @@
                     } else { r.element.style.display = 'none'; }
                 }
             }
-            if(topHalf.visible && !isDying) { updateNameTag(myPeerId, playerName, playerGroup.position); if(dogEquipped) updateNameTag(myPeerId, "Tuky", myDog.position, true); } else { if(nameTags[myPeerId]) nameTags[myPeerId].style.display = 'none'; if(nameTags[myPeerId+'_dog']) nameTags[myPeerId+'_dog'].style.display = 'none'; }
-            Object.keys(otherPlayers).forEach(k => { let op = otherPlayers[k]; if(!op.isDying && op.children[0].visible) { updateNameTag(k, op.name, op.position); if(op.hasDog) updateNameTag(k, "Tuky", op.dog.position, true); } else { if(nameTags[k]) nameTags[k].style.display = 'none'; if(nameTags[k+'_dog']) nameTags[k+'_dog'].style.display = 'none'; } });
+            if(topHalf.visible && !isDying) { updateNameTag(myPeerId, playerName, playerGroup.position); if(dogEquipped) updateNameTag(myPeerId, "Pac-Dog", myDog.position, true); } else { if(nameTags[myPeerId]) nameTags[myPeerId].style.display = 'none'; if(nameTags[myPeerId+'_dog']) nameTags[myPeerId+'_dog'].style.display = 'none'; }
+            Object.keys(otherPlayers).forEach(k => { let op = otherPlayers[k]; if(!op.isDying && op.children[0].visible) { updateNameTag(k, op.name, op.position); if(op.hasDog) updateNameTag(k, "Pac-Dog", op.dog.position, true); } else { if(nameTags[k]) nameTags[k].style.display = 'none'; if(nameTags[k+'_dog']) nameTags[k+'_dog'].style.display = 'none'; } });
 
-            // Dogs Rendering
-            if(!isDying && topHalf.visible && dogEquipped) { myDog.visible = true; myDog.position.lerp(playerGroup.position.clone().add(new THREE.Vector3(-1, 0, -1).applyAxisAngle(new THREE.Vector3(0,1,0), playerGroup.rotation.y)), 0.1); myDog.lookAt(playerGroup.position); } else { myDog.visible = false; }
+            // Dogs Rendering (Cuidar que no se vea en 1ra persona)
+            if(!isDying && topHalf.visible && dogEquipped && !isFirstPerson) { myDog.visible = true; myDog.position.lerp(playerGroup.position.clone().add(new THREE.Vector3(-1, 0, -1).applyAxisAngle(new THREE.Vector3(0,1,0), playerGroup.rotation.y)), 0.1); myDog.lookAt(playerGroup.position); } else { myDog.visible = false; }
             Object.keys(otherPlayers).forEach(k => { let op = otherPlayers[k]; if(!op.isDying && op.children[0].visible && op.hasDog) { op.dog.visible=true; op.dog.position.lerp(op.position.clone().add(new THREE.Vector3(-1, 0, -1).applyAxisAngle(new THREE.Vector3(0,1,0), op.rotation.y)), 0.1); op.dog.lookAt(op.position); } else { op.dog.visible=false; }});
 
             powerPellets.forEach(p => { if(p.visible) { p.material.color.setHex(rainbowHex); if(p.pAura) p.pAura.material.color.setHex(rainbowHex); } });
@@ -1096,10 +1261,11 @@
                 if(currentMode.includes('pvp')) {
                     Object.values(otherPlayers).forEach(op => {
                         if (op.isDying || !op.children[0].visible || topHalf.visible === false) return;
-                        if (currentMode === 'pvp-team' && op.color === pacColor) return; // NO FRIENDLY FIRE
                         if (playerGroup.position.distanceTo(op.position) < 1.8) {
                             const myPower = powerUp, theirPower = op.timers && op.timers.p > 0;
-                            if (!myPower && theirPower) { killPlayer(); } else if (myPower && !theirPower) { addScore(500); playSfx(1500, 0.2, 'sawtooth'); showComboScore(500, op.position); }
+                            // SOLO el jugador con pastilla puede matar al que no tiene
+                            if (!myPower && theirPower) { killPlayer(); } 
+                            else if (myPower && !theirPower) { addScore(500); playSfx(1500, 0.2, 'sawtooth'); showComboScore(500, op.position); }
                         }
                     });
                 }
@@ -1125,8 +1291,13 @@
             if(isRotU) cameraPivot.rotation.x = Math.min(cameraPivot.rotation.x + 0.03, 0.5); if(isRotD) cameraPivot.rotation.x = Math.max(cameraPivot.rotation.x - 0.03, -0.2);
             if(isJumping) { playerGroup.position.y += velocityY; velocityY -= 0.015; if(playerGroup.position.y <= 1.0) { playerGroup.position.y = 1.0; isJumping = false; } }
 
+            let currentTotalSpeed = 1 + pacSpeedBoost;
+            if(dashActive > 0) { dashActive--; currentTotalSpeed += 1.5; }
+            if(dashCooldown > 0) dashCooldown--;
+
             const dir = new THREE.Vector3(moveS, 0, moveF).applyAxisAngle(new THREE.Vector3(0,1,0), playerGroup.rotation.y);
-            dir.multiplyScalar(1 + pacSpeedBoost); 
+            dir.multiplyScalar(currentTotalSpeed); 
+            
             const npX = playerGroup.position.clone(); npX.x += dir.x; if(!checkCol(npX, true)) playerGroup.position.x = npX.x;
             const npZ = playerGroup.position.clone(); npZ.z += dir.z; if(!checkCol(npZ, true)) playerGroup.position.z = npZ.z;
 
@@ -1155,15 +1326,15 @@
                             theBoss.currentAttack = atk; theBoss.attackDuration = 180;
                             
                             if(atk === 1) bossHp = Math.min(bossMaxHp, bossHp + 5); // Heal
-                            if(atk === 2) { // Teleport near random player
+                            if(atk === 2) { // Teleport
                                 let targets = [playerGroup, ...Object.values(otherPlayers).filter(op=>op.children[0].visible)];
                                 let t = targets[Math.floor(Math.random()*targets.length)];
                                 if(t) { theBoss.position.set(t.position.x + (Math.random()*4-2), 0, t.position.z + (Math.random()*4-2)); }
                             }
                             if(atk === 5) { createBarkRing(theBoss.position); } // Blast ring (visual)
-                            if(atk === 7) { // Clone/Spawn mini ghost
+                            if(atk === 7) { // Clone spawn
                                 let g = createGhost({ai:'chase', color: bossColors[(currentLevel-1)%3], cornerX: 0, cornerZ: 0});
-                                g.position.copy(theBoss.position); mapGroup.add(g); ghosts.push(g);
+                                g.isClone = true; g.position.copy(theBoss.position); mapGroup.add(g); ghosts.push(g);
                             }
                             triggerBossAttackAlert(atk);
                             if(isMultiplayer) broadcastState('bossAtk', {a:atk, hp:bossHp});
@@ -1186,6 +1357,10 @@
 
                     let targetX = playerGroup.position.x, targetZ = playerGroup.position.z;
                     if(g.isDead) {
+                        if(g.isClone) {
+                            g.position.set(9999, -9999, 9999); // Eliminado para siempre, no revive
+                            return;
+                        }
                         targetX = -2; targetZ = -2; let dx = targetX - g.position.x, dz = targetZ - g.position.z; let dist = Math.sqrt(dx*dx + dz*dz) || 1;
                         if(dist < 0.5) { g.isDead = false; g.children[0].visible = true; g.children[0].material.color.set(powerUp ? 0x0000ff : g.baseColor); } 
                         else { g.position.x += (dx/dist) * 0.15; g.position.z += (dz/dist) * 0.15; g.lookAt(targetX, 0.6, targetZ); } return;
@@ -1211,12 +1386,35 @@
                 addScore(activeFruit.fruitValue); playSfx(900, 0.4, 'sine'); happyTimer = 60; mapGroup.remove(activeFruit); activeFruit = null; document.getElementById('fruit-indicator').style.display = 'none';
             }
 
+            // Cámara en 1ra persona: Corrección de ángulo (Math.PI restado)
+            if(isFirstPerson) {
+                cameraPivot.rotation.y = pacmanModel.rotation.y - Math.PI; 
+                cameraPivot.position.copy(pacmanModel.position);
+                camera.position.set(0, 0.5, 0);
+                camera.rotation.set(0, 0, 0); 
+                pacmanModel.scale.set(0.001, 0.001, 0.001); // Ocultar para no tapar cámara
+            }
+
             miniCtx.fillStyle = '#000'; miniCtx.fillRect(0,0,120,120); const scale = 2.0, off = 60; 
-            miniCtx.fillStyle = '#0033ff'; walls.forEach(w => miniCtx.fillRect(w.min.x*scale+off, w.min.z*scale+off, (w.max.x-w.min.x)*scale, (w.max.z-w.min.z)*scale));
+            miniCtx.fillStyle = (customSettings && customSettings.wc) ? customSettings.wc : '#0033ff'; walls.forEach(w => miniCtx.fillRect(w.min.x*scale+off, w.min.z*scale+off, (w.max.x-w.min.x)*scale, (w.max.z-w.min.z)*scale));
             miniCtx.fillStyle = 'rgba(255, 0, 0, 0.3)'; ghostWalls.forEach(w => miniCtx.fillRect(w.min.x*scale+off, w.min.z*scale+off, (w.max.x-w.min.x)*scale, (w.max.z-w.min.z)*scale));
             dots.forEach(d => { if(d.visible) { if (d.pType === 2) miniCtx.fillStyle = '#' + rainbowHex.toString(16).padStart(6, '0'); else miniCtx.fillStyle = '#' + d.material.color.getHexString(); let dS = d.pType === 0 ? 1.5 : 3; miniCtx.fillRect(d.position.x*scale+off - dS/2, d.position.z*scale+off - dS/2, dS, dS); } });
             if(activeFruit) { miniCtx.fillStyle = '#' + activeFruit.material.color.getHexString(); miniCtx.beginPath(); miniCtx.arc(activeFruit.position.x*scale+off, activeFruit.position.z*scale+off, 2.5, 0, Math.PI*2); miniCtx.fill(); }
-            if(!isDying && topHalf.visible) { miniCtx.fillStyle = '#' + pacColor.toString(16).padStart(6, '0'); miniCtx.fillRect(playerGroup.position.x*scale+off - 2, playerGroup.position.z*scale+off - 2, 4, 4); }
+            
+            if(!isDying && topHalf.visible) { 
+                miniCtx.fillStyle = '#' + pacColor.toString(16).padStart(6, '0'); 
+                let pXMap = playerGroup.position.x*scale+off;
+                let pZMap = playerGroup.position.z*scale+off;
+                miniCtx.fillRect(pXMap - 2, pZMap - 2, 4, 4);
+                
+                miniCtx.strokeStyle = '#fff';
+                miniCtx.lineWidth = 1;
+                miniCtx.beginPath();
+                miniCtx.moveTo(pXMap, pZMap);
+                miniCtx.lineTo(pXMap + aimDir.x * 6, pZMap + aimDir.z * 6);
+                miniCtx.stroke();
+            }
+            
             Object.keys(otherPlayers).forEach(k => { const op = otherPlayers[k]; if(op.children[0].visible) { miniCtx.fillStyle = '#' + op.children[0].material.color.getHexString(); miniCtx.fillRect(op.position.x*scale+off-2, op.position.z*scale+off-2, 4, 4); } });
             ghosts.forEach(g => { if(!g.isDead) { miniCtx.fillStyle = powerUp ? '#0000ff' : '#' + g.baseColor.toString(16).padStart(6, '0'); miniCtx.fillRect(g.position.x*scale+off - 2, g.position.z*scale+off - 2, 4, 4); } });
             if(theBoss) { miniCtx.fillStyle = '#' + bossColors[(currentLevel-1)%3].toString(16).padStart(6,'0'); miniCtx.fillRect(theBoss.position.x*scale+off - 4, theBoss.position.z*scale+off - 4, 8, 8); }
