@@ -62,13 +62,14 @@
         #chat-input { flex-grow: 1; background: transparent; border: none; color: #ffff00; padding: 5px; font-family: inherit; outline: none; }
         #chat-send { background: #00f2ff; border: none; font-weight: bold; cursor: pointer; padding: 0 10px; }
 
+        #tutorial-overlay { display: none; position: absolute; top: 20%; width: 100%; text-align: center; color: #ffff00; font-size: 24px; z-index: 30; font-weight: bold; text-shadow: 2px 2px 4px #000; animation: float 2s infinite ease-in-out; }
+        @keyframes float { 0% {transform: translateY(0);} 50% {transform: translateY(-10px);} 100% {transform: translateY(0);} }
+
         /* Modal Styles */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; align-items: center; justify-content: center; color: white; padding: 20px; box-sizing: border-box; flex-direction: column; overflow-y: auto; }
         .modal-content { background: #000411; border: 2px solid #00f2ff; padding: 20px; border-radius: 10px; max-width: 600px; text-align: left; }
         .modal-content h2 { color: #ffff00; text-align: center; margin-top: 0;}
-        .modal-content ul { line-height: 1.6; }
-        .modal-content li span { font-weight: bold; color: #ff00ff; }
-
+        
         /* Editor Styles */
         #editor-grid { display: grid; grid-template-columns: repeat(15, 20px); gap: 1px; background: #333; padding: 2px; margin: 10px auto; width: max-content; }
         .cell { width: 20px; height: 20px; background: #000; cursor: pointer; }
@@ -80,18 +81,22 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
-    <div id="tutorial-modal" class="modal">
-        <div class="modal-content">
-            <h2>HOW TO PLAY</h2>
-            <ul>
-                <li><span>Movement:</span> Left joystick. Right buttons rotate, jump, and DASH! Switch CAM to 1st Person for immersion!</li>
-                <li><span>Ghosts:</span> Avoid them! Touching them costs a life.</li>
-                <li><span>Co-op / Single:</span> Clear dots to win. Dead teammates revive with 1 life next round!</li>
-                <li><span>PVP & Comp PVP:</span> Last Pac-Man standing wins. Earn Trophies in Competitive! Beware the Glitch 256 when time is up!</li>
-                <li><span>Boss Rush (100 Levels):</span> Defeat 100 bosses in a row! Eat power pellets to ram them.</li>
-                <li><span>Pac-Dog:</span> Equip him in the menu! He passively barks every 15s to stun nearby ghosts.</li>
-            </ul>
-            <center><button class="action-btn" id="btn-close-tutorial" style="width: 150px;">CLOSE</button></center>
+    <div id="arcade-modal" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <h2>ARCADE MODE</h2>
+            <p style="color: #00f2ff;">Unlock up to 256 levels!</p>
+            <div style="font-size: 24px; color: #ffff00; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 15px;">
+                <button id="btn-arc-down" class="btn" style="width:50px; height:50px; font-size: 30px;">-</button> 
+                <span>LEVEL: <span id="arcade-level-display">1</span></span> 
+                <button id="btn-arc-up" class="btn" style="width:50px; height:50px; font-size: 30px;">+</button>
+            </div>
+            <p style="font-size: 14px; color: #aaa; margin-bottom: 20px;">Max Unlocked: <span id="arcade-max-display">1</span> / 256</p>
+            
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button class="action-btn" id="btn-arc-solo" style="background: #00ff00; width: 45%;">PLAY SOLO</button>
+                <button class="action-btn" id="btn-arc-coop" style="background: #00f2ff; width: 45%;">HOST LOBBY</button>
+            </div>
+            <button class="action-btn" id="btn-arc-close" style="background: #ff0000; color: white; margin-top: 15px; width: 150px;">BACK</button>
         </div>
     </div>
 
@@ -134,7 +139,7 @@
         <input type="text" id="player-name" class="input-field" placeholder="ENTER NICKNAME" maxlength="12" style="margin-bottom: 10px; border-color: #ffff00;">
 
         <div style="display: flex; gap: 10px; width: 300px; justify-content: center; flex-wrap: wrap; margin-bottom: 5px;">
-            <button class="action-btn" id="btn-tutorial" style="background: #ffffff; width: 45%; padding: 10px; font-size: 12px;">TUTORIAL</button>
+            <button class="action-btn" id="btn-tutorial" style="background: #ffffff; width: 45%; padding: 10px; font-size: 12px; color: black;">PLAY TUTORIAL</button>
             <button class="action-btn" id="btn-workshop" style="background: #ff00ff; width: 45%; padding: 10px; font-size: 12px; color: white;">WORKSHOP</button>
         </div>
 
@@ -154,15 +159,17 @@
 
         <div style="margin: 5px 0; border-top: 1px solid #444; width: 80%;"></div>
         
+        <button class="action-btn" id="btn-arcade" style="background: #8a2be2; color: white; width: 250px; margin-bottom: 5px;">ARCADE MODE (1-256)</button>
         <button class="action-btn" id="btn-single" style="width: 250px;">SINGLE PLAYER</button>
         
-        <div style="display: flex; gap: 5px; width: 250px; justify-content: space-between;">
+        <div style="display: flex; gap: 5px; width: 250px; justify-content: space-between; margin-top: 5px;">
             <button class="action-btn" id="btn-host-coop" style="background: #00f2ff; width: 48%; padding: 12px 5px; font-size: 12px;">HOST CO-OP</button>
             <button class="action-btn" id="btn-host-pvp" style="background: #ff5500; width: 48%; padding: 12px 5px; font-size: 12px; color: white;">HOST PVP</button>
         </div>
 
-        <div style="display: flex; gap: 5px; width: 250px; justify-content: center; margin-top: 5px;">
-            <button class="action-btn" id="btn-host-comp" style="background: #ffaa00; width: 100%; padding: 12px 5px; font-size: 12px; color: black;">HOST COMP PVP (🏆)</button>
+        <div style="display: flex; gap: 5px; width: 250px; justify-content: space-between; margin-top: 5px;">
+            <button class="action-btn" id="btn-host-comp" style="background: #ffaa00; width: 48%; padding: 12px 5px; font-size: 12px; color: black;">COMP PVP 🏆</button>
+            <button class="action-btn" id="btn-host-hide" style="background: #32cd32; width: 48%; padding: 12px 5px; font-size: 12px; color: black;">HIDE N SEEK</button>
         </div>
 
         <div style="display: flex; gap: 5px; width: 250px; justify-content: space-between; margin-top: 5px;">
@@ -205,12 +212,13 @@
     <div id="ready-screen"><div id="ready-text">READY?</div></div>
     <div id="score-popup">200</div>
     <div id="respawn-timer">SPECTATING...</div>
+    <div id="tutorial-overlay">USE JOYSTICK TO MOVE</div>
     
     <div id="multiplayer-info">ID: <span id="mp-id">Connecting...</span><br>Players: <span id="mp-count">1</span></div>
 
     <div id="ui">
         <span id="ui-level-wrapper">LEVEL: <span id="level-disp">1</span> | </span>
-        SCORE: <span id="score">0</span> | 
+        <span id="score-label">SCORE:</span> <span id="score">0</span> | 
         <svg id="pac-icon" width="16" height="16" viewBox="0 0 100 100" style="vertical-align: middle; fill: #ffff00;">
             <path d="M50,50 L100,20 A50,50 0 1,0 100,80 Z"></path>
         </svg> x <span id="lives">3</span><br>
@@ -261,12 +269,51 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // --- UI & Trophies Logic ---
+        // --- MAP GENERATION DYNAMICA ---
+        function generateMapDataGrid(lvl, mode) {
+            let size = (mode === 'hide') ? 31 : 15;
+            let grid = new Array(size * size).fill(0);
+            
+            for(let i=0; i<size; i++) { grid[i]=1; grid[(size-1)*size+i]=1; grid[i*size]=1; grid[i*size+(size-1)]=1; }
+
+            if (mode === 'hide') {
+                let offset = Math.floor(size / 2); 
+                for(let z=2; z<size-2; z+=2) {
+                    for(let x=2; x<size-2; x+=2) {
+                        if(z>=offset-1 && z<=offset+1 && x>=offset-1 && x<=offset+1) continue; 
+                        grid[z*size+x] = 1;
+                        if(Math.random()>0.2) { 
+                            let dir = Math.floor(Math.random()*4);
+                            if(dir===0) grid[z*size+x+1] = 1;
+                            if(dir===1) grid[(z+1)*size+x] = 1;
+                            if(dir===2) grid[z*size+x-1] = 1;
+                            if(dir===3) grid[(z-1)*size+x] = 1;
+                        }
+                    }
+                }
+                for(let ci=offset-1; ci<=offset+1; ci++) for(let cj=offset-1; cj<=offset+1; cj++) grid[ci*size+cj] = 0;
+            } else {
+                let offset = Math.floor(size / 2); 
+                grid[offset*size+0] = 0; grid[offset*size+(size-1)] = 0; 
+                for(let i=2; i<size-2; i+=2) for(let j=2; j<size-2; j+=2) {
+                    if(i===offset-1 || i===offset+1 || j===offset-1 || j===offset+1) continue; 
+                    grid[i*size+j] = 1; if(Math.random()>0.4){ if(Math.random()>0.5) grid[i*size+j+1]=1; else grid[(i+1)*size+j]=1; }
+                }
+                for(let ci=offset-1; ci<=offset+1; ci++) for(let cj=offset-1; cj<=offset+1; cj++) grid[ci*size+cj] = 0;
+                
+                for(let z=0; z<size; z++) for(let x=0; x<size; x++) {
+                    if(grid[z*size+x] === 0 && !(z>=offset-1 && z<=offset+1 && x>=offset-1 && x<=offset+1)) {
+                        grid[z*size+x] = Math.random()<0.08 ? 3 : 2; 
+                    }
+                }
+            }
+            return grid;
+        }
+
         let myTrophies = parseInt(localStorage.getItem('pacman_trophies') || '0');
         document.getElementById('my-trophies').innerText = myTrophies;
 
-        document.getElementById('btn-tutorial').onclick = () => { document.getElementById('tutorial-modal').style.display = 'flex'; };
-        document.getElementById('btn-close-tutorial').onclick = () => { document.getElementById('tutorial-modal').style.display = 'none'; };
+        document.getElementById('btn-tutorial').onclick = () => { lives=3; score=0; isMultiplayer=false; currentMode='tutorial'; startGame(1); };
         document.getElementById('btn-workshop').onclick = () => { document.getElementById('workshop-modal').style.display = 'flex'; };
         document.getElementById('btn-close-workshop').onclick = () => { document.getElementById('workshop-modal').style.display = 'none'; };
 
@@ -280,7 +327,32 @@
             document.getElementById('btn-toggle-dog').innerText = `PAC-DOG: ${dogEquipped ? 'ON' : 'OFF'}`;
         };
 
-        // --- Editor Data ---
+        let arcadeMaxUnlocked = parseInt(localStorage.getItem('pacman_arcade_max') || '1');
+        let arcadeSelectedLevel = arcadeMaxUnlocked;
+
+        document.getElementById('btn-arcade').onclick = () => {
+            arcadeMaxUnlocked = parseInt(localStorage.getItem('pacman_arcade_max') || '1');
+            arcadeSelectedLevel = arcadeMaxUnlocked;
+            document.getElementById('arcade-level-display').innerText = arcadeSelectedLevel;
+            document.getElementById('arcade-max-display').innerText = arcadeMaxUnlocked;
+            document.getElementById('arcade-modal').style.display = 'flex';
+        };
+        document.getElementById('btn-arc-close').onclick = () => { document.getElementById('arcade-modal').style.display = 'none'; };
+        document.getElementById('btn-arc-down').onclick = () => { if(arcadeSelectedLevel > 1) { arcadeSelectedLevel--; document.getElementById('arcade-level-display').innerText = arcadeSelectedLevel; } };
+        document.getElementById('btn-arc-up').onclick = () => { if(arcadeSelectedLevel < arcadeMaxUnlocked && arcadeSelectedLevel < 256) { arcadeSelectedLevel++; document.getElementById('arcade-level-display').innerText = arcadeSelectedLevel; } };
+        
+        document.getElementById('btn-arc-solo').onclick = () => {
+            document.getElementById('arcade-modal').style.display = 'none';
+            lives = 3; score = 0; isMultiplayer=false; currentMode='arcade'; 
+            playerName=document.getElementById('player-name').value||"Player"; 
+            currentMapData = generateMapDataGrid(arcadeSelectedLevel, currentMode);
+            startGame(arcadeSelectedLevel);
+        };
+        document.getElementById('btn-arc-coop').onclick = () => {
+            document.getElementById('arcade-modal').style.display = 'none';
+            setupHostMode('arcade');
+        };
+
         let currentTool = 1;
         let editorGrid = new Array(225).fill(0);
         for(let i=0; i<15; i++) { editorGrid[i]=1; editorGrid[210+i]=1; editorGrid[i*15]=1; editorGrid[i*15+14]=1; }
@@ -332,16 +404,20 @@
         // --- Multiplayer PeerJS ---
         let peer = null, peerConnections = [], hostConnection = null;
         let isMultiplayer = false, isHost = true;
-        let currentMode = 'single'; // single, coop, pvp, comp-pvp, boss, house, custom
+        let currentMode = 'single'; 
         let customSettings = null, myPeerId = 'local';
         let playerName = "Player";
         const otherPlayers = {}; 
         let activePvpPlayers = new Set();
         let globalAudioObj = null, bossMusicInterval = null;
-
-        const maxPlayersForMode = { 'single':1, 'coop':4, 'pvp':4, 'comp-pvp':4, 'boss':10, 'house':200, 'custom':4 };
+        let hideSeekerId = null;
+        let isSeeker = false;
         
-        // --- Emoji Reactions System ---
+        let myTeam = 0;
+        let globalTeamMap = {};
+
+        const maxPlayersForMode = { 'single':1, 'tutorial':1, 'arcade':4, 'coop':4, 'pvp':4, 'comp-pvp':4, 'hide':4, 'boss':10, 'house':200, 'custom':4 };
+        
         const allEmojis = ['ᗧ','ᗣ','🍒','🍓','💊','👻','💀','🏆','👾','🌀'];
         let myEmojis = [];
         const emojiPicker = document.getElementById('emoji-picker');
@@ -364,7 +440,6 @@
             activeReactions[id] = { emoji, expireTime: Date.now() + 2000, element: el };
         }
 
-        // --- Variables de Juego ---
         let currentLevel = 1, score = 0, lives = 3, nextLifeScore = 10000;
         let powerUp = false; let pacSpeedBoost = 0; 
         let remainingDots = 0, gameActive = false, allowMovement = false;
@@ -374,9 +449,10 @@
         let respawnTimeLeft = 0, deathAnimProgress = 0, happyTimer = 0; 
         let dogAbilityTimer = 900;
         let dashActive = 0, dashCooldown = 0;
+        let activeDebuff = null, debuffTimer = 0;
+        let tutorialStep = 0, tutorialDistance = 0, tutGhost = null;
         const killScores = [200, 400, 800, 1600, 2400, 3200, 4200];
         
-        // Glitch 256 PVP Muerte Subita variables
         let glitchMode = false;
         let glitchBounds = 30;
         let glitchMeshLeft, glitchMeshRight;
@@ -386,7 +462,10 @@
         let velocityY = 0, isJumping = false;
         let aimDir = new THREE.Vector3(0, 0, -1); 
 
-        // Boss Logic
+        function isSpectatorMode() {
+            return (lives <= 0 && isRespawning) || (currentMode === 'hide' && isSeeker && isRespawning);
+        }
+
         let theBoss = null, bossHp = 0, bossMaxHp = 20;
 
         const scene = new THREE.Scene();
@@ -418,7 +497,6 @@
         scene.add(new THREE.AmbientLight(0x404040));
         const dirLight = new THREE.DirectionalLight(0xffffff, 1); dirLight.position.set(10, 20, 10); scene.add(dirLight);
 
-        // Models
         const playerGroup = new THREE.Group(); scene.add(playerGroup);
         const pacmanModel = new THREE.Group(); playerGroup.add(pacmanModel);
 
@@ -452,12 +530,11 @@
         }
         let myDog = createDog();
 
-        // CÁMARA FIX - Local Space Restore System
         const cameraPivot = new THREE.Group(); playerGroup.add(cameraPivot);
         cameraPivot.add(camera); camera.position.set(0, 2, 5); camera.lookAt(0, 0, -5);
-        const defaultCamQuat = camera.quaternion.clone(); // Guarda la rotación perfecta local para la 3ra persona
+        const defaultCamQuat = camera.quaternion.clone(); 
 
-        document.getElementById('btnCamera').addEventListener('touchstart', (e) => {
+        const handleCamToggle = (e) => {
             e.preventDefault();
             if(!allowMovement) return;
             isFirstPerson = !isFirstPerson;
@@ -465,14 +542,21 @@
             playSfx(500, 0.1, 'sine');
             
             if(!isFirstPerson) {
-                // Restaura perfectamente la 3ra persona original sin que se bloquee apuntando al centro
                 cameraPivot.rotation.y = 0;
                 cameraPivot.position.set(0, 0, 0);
                 camera.position.set(0, 2, 5);
                 camera.quaternion.copy(defaultCamQuat);
                 pacmanModel.scale.set(1, 1, 1);
             }
-        });
+
+            if(currentMode === 'tutorial' && tutorialStep === 2) {
+                tutorialStep++; document.getElementById('tutorial-overlay').innerText = "EAT THE DOTS!";
+                createDot(0, -5, 0); createDot(5, -5, 0); createDot(-5, -5, 0);
+            }
+        };
+        const btnCam = document.getElementById('btnCamera');
+        btnCam.addEventListener('touchstart', handleCamToggle);
+        btnCam.addEventListener('mousedown', handleCamToggle);
 
         function setExpression(model, expr) {
             if(!model || !model.lEye) return;
@@ -501,12 +585,19 @@
         }
 
         function updateNameTag(id, name, pos, isDog = false) {
+            if(currentMode === 'hide' && id !== myPeerId) return; 
             let key = id + (isDog ? '_dog' : '');
             if(!nameTags[key]) {
                 const el = document.createElement('div'); el.className = isDog ? 'name-tag dog-tag' : 'name-tag'; 
                 document.body.appendChild(el); nameTags[key] = el;
             }
             nameTags[key].innerText = name;
+            
+            if (currentMode === 'comp-pvp' && !isDog) {
+                let t = (id === myPeerId) ? myTeam : globalTeamMap[id];
+                nameTags[key].style.color = (t === myTeam) ? '#00ff00' : '#ff0000';
+            }
+            
             const vector = pos.clone(); vector.y += (isDog ? 1.0 : 2.0); vector.project(camera);
             if(vector.z < 1) {
                 nameTags[key].style.left = (vector.x * 0.5 + 0.5) * window.innerWidth + 'px';
@@ -518,8 +609,8 @@
         function broadcastState(type, data) {
             if(!isMultiplayer) return;
             const msg = { type: type, data: data };
-            if(isHost) { peerConnections.forEach(conn => conn.send(msg)); } 
-            else if(hostConnection) { hostConnection.send(msg); }
+            if(isHost) { peerConnections.forEach(conn => { if (conn && conn.open) conn.send(msg); }); } 
+            else if(hostConnection && hostConnection.open) { hostConnection.send(msg); }
         }
 
         function createBarkRing(pos) {
@@ -544,6 +635,7 @@
             const rE = new THREE.Mesh(eyeGeo, eyeMat); rE.position.set(-0.25, 1.0, 0.5); const rP = new THREE.Mesh(pupilGeo, pupilMat); rP.position.set(-0.25, 1.0, 0.62);
             group.add(lE, lP, rE, rP);
             group.baseColor = config.color; group.aiType = config.ai; group.cornerX = config.cornerX; group.cornerZ = config.cornerZ; group.isDead = false; group.stunTimer = 0; group.isClone = false;
+            group.isSabotage = config.isSabotage || false;
             return group;
         }
 
@@ -582,25 +674,6 @@
             mapGroup.add(dot); dots.push(dot); remainingDots++;
         }
 
-        // Generate Map Sync Grid Data
-        function generateMapDataGrid(lvl) {
-            let grid = new Array(225).fill(0);
-            for(let i=0; i<15; i++) { grid[i]=1; grid[210+i]=1; grid[i*15]=1; grid[i*15+14]=1; }
-            grid[7*15+0] = 0; grid[7*15+14] = 0; 
-            for(let i=2; i<13; i+=2) for(let j=2; j<13; j+=2) {
-                if(i===6 || i===8 || j===6 || j===8) continue; 
-                grid[i*15+j] = 1; if(Math.random()>0.4){ if(Math.random()>0.5) grid[i*15+j+1]=1; else grid[(i+1)*15+j]=1; }
-            }
-            for(let ci=6; ci<=8; ci++) for(let cj=6; cj<=8; cj++) grid[ci*15+cj] = 0;
-            
-            for(let z=0; z<15; z++) for(let x=0; x<15; x++) {
-                if(grid[z*15+x] === 0 && !(z>=6 && z<=8 && x>=6 && x<=8)) {
-                    grid[z*15+x] = Math.random()<0.08 ? 3 : 2; // 3=power, 2=dot
-                }
-            }
-            return grid;
-        }
-
         function generateMap(level) {
             while(mapGroup.children.length > 0){ mapGroup.remove(mapGroup.children[0]); }
             walls = []; ghostWalls = []; wallMeshes = []; dots = []; ghosts = []; powerPellets = []; remainingDots = 0; theBoss = null;
@@ -610,12 +683,16 @@
             let wColorStr = (customSettings && customSettings.wc) ? customSettings.wc : "#0033ff";
             let defaultWallColor = parseInt(wColorStr.replace('#','0x'));
 
-            if(currentMode === 'custom' && customSettings) {
+            if(currentMode === 'tutorial') {
+                for(let i=0; i<15; i++) { createWall((i-7)*4, -28, defaultWallColor); createWall((i-7)*4, 28, defaultWallColor); createWall(-28, (i-7)*4, defaultWallColor); createWall(28, (i-7)*4, defaultWallColor); }
+            } else if(currentMode === 'custom' && customSettings) {
+                let size = Math.sqrt(customSettings.g.length);
+                let offset = Math.floor(size / 2);
                 let sIdx=0, fIdx=0;
-                for(let z=0; z<15; z++) {
-                    for(let x=0; x<15; x++) {
-                        let val = customSettings.g[z*15+x];
-                        let px = (x-7)*4, pz = (z-7)*4;
+                for(let z=0; z<size; z++) {
+                    for(let x=0; x<size; x++) {
+                        let val = customSettings.g[z*size+x];
+                        let px = (x-offset)*4, pz = (z-offset)*4;
                         if(val===1) createWall(px, pz, defaultWallColor);
                         if(val===2) createDot(px, pz, 0);
                         if(val===3) createDot(px, pz, 2);
@@ -639,24 +716,34 @@
                 bossMaxHp = 10 + (level*5); bossHp = bossMaxHp;
             } else {
                 let grid = currentMapData;
-                for(let z=0; z<15; z++) {
-                    for(let x=0; x<15; x++) {
-                        let val = grid[z*15+x];
-                        let px = (x-7)*4, pz = (z-7)*4;
+                let size = Math.sqrt(grid.length);
+                let offset = Math.floor(size / 2);
+
+                for(let z=0; z<size; z++) {
+                    for(let x=0; x<size; x++) {
+                        let val = grid[z*size+x];
+                        let px = (x-offset)*4, pz = (z-offset)*4;
                         if(val === 1) createWall(px, pz, defaultWallColor);
                         else if(val === 2) createDot(px, pz, 0);
                         else if(val === 3) createDot(px, pz, 2);
                     }
                 }
 
-                const ghBox = new THREE.Mesh(new THREE.BoxGeometry(12,4,12), new THREE.MeshPhongMaterial({color:0xff0000, transparent:true, opacity:0.15, wireframe:true}));
-                ghBox.position.set(-2, 2, -2); mapGroup.add(ghBox); ghostWalls.push(new THREE.Box3().setFromObject(ghBox));
+                if(currentMode !== 'hide') {
+                    const ghBox = new THREE.Mesh(new THREE.BoxGeometry(12,4,12), new THREE.MeshPhongMaterial({color:0xff0000, transparent:true, opacity:0.15, wireframe:true}));
+                    ghBox.position.set(-2, 2, -2); mapGroup.add(ghBox); ghostWalls.push(new THREE.Box3().setFromObject(ghBox));
 
-                const numGhosts = (currentMode === 'pvp' || currentMode === 'comp-pvp') ? 4 : Math.min(8, 1 + Math.floor(level/2)); 
-                for(let i=0; i<numGhosts; i++) {
-                    const g = createGhost(ghostTypes[i%ghostTypes.length]); 
-                    g.position.set((i%3 - 1)*2, 0, (Math.floor(i/3) - 1)*2); // fixed map spawn
-                    mapGroup.add(g); ghosts.push(g);
+                    const numGhosts = currentMode.includes('pvp') ? 4 : Math.min(8, 1 + Math.floor(level/2)); 
+                    for(let i=0; i<numGhosts; i++) {
+                        const g = createGhost(ghostTypes[i%ghostTypes.length]); 
+                        g.position.set((i%3 - 1)*2, 0, (Math.floor(i/3) - 1)*2); 
+                        mapGroup.add(g); ghosts.push(g);
+                    }
+                    
+                    if(currentMode.includes('pvp') && isHost) {
+                        const sg = createGhost({ai: 'wander', color: 0x32cd32, isSabotage: true});
+                        sg.position.set(0,0,0); mapGroup.add(sg); ghosts.push(sg);
+                    }
                 }
             }
 
@@ -664,7 +751,7 @@
             document.getElementById('remaining').innerText = remainingDots; document.getElementById('level-disp').innerText = level;
         }
 
-        function resetPowerups() { powerUp = false; ghostKillCombo = 0; happyTimer = 0; pacSpeedBoost = 0; document.getElementById('powerBarContainer').style.display = 'none'; }
+        function resetPowerups() { powerUp = false; ghostKillCombo = 0; happyTimer = 0; pacSpeedBoost = 0; document.getElementById('powerBarContainer').style.display = 'none'; activeDebuff=null; debuffTimer=0; }
 
         function playBossMusic() {
             if(bossMusicInterval) clearInterval(bossMusicInterval);
@@ -703,11 +790,13 @@
 
         function startGame(level) {
             currentLevel = level; 
-            if(currentLevel > 360 && (currentMode==='single'||currentMode==='coop')) { endGame("YOU BEAT THE FULL GAME!", true); return; }
+            if(currentMode !== 'hide') { hideSeekerId = null; isSeeker = false; }
 
             pacMat.color.setHex(pacColor); document.getElementById('pac-icon').style.fill = '#' + pacColor.toString(16).padStart(6, '0');
             
             if(myEmojis.length < 4) { allEmojis.forEach(e => { if(!myEmojis.includes(e) && myEmojis.length < 4) myEmojis.push(e); }); }
+            myEmojis = [...new Set(myEmojis)]; 
+            
             const rUI = document.getElementById('reactions-ui'); rUI.innerHTML = '';
             myEmojis.forEach(e => {
                 let btn = document.createElement('div'); btn.className = 'btn'; btn.style.width = '40px'; btn.style.height = '40px'; btn.style.fontSize = '20px'; btn.style.borderRadius = '50%'; btn.innerText = e;
@@ -721,24 +810,37 @@
             generateMap(currentLevel); resetPowerups();
             isRespawning = false; document.getElementById('respawn-timer').style.display = 'none';
             isDying = false; deathAnimProgress = 0; dogAbilityTimer = 900; dashActive = 0; dashCooldown = 0;
-            if(currentLevel===1) { lives = (currentMode==='boss'||currentMode==='custom') ? 3 : lives; }
+            
+            lives = 3;
             if(currentMode==='house') lives=999;
             
             topHalf.visible = true; bottomHalf.visible = true; auraMesh.visible = true; topHalf.rotation.x = 0; bottomHalf.rotation.x = 0;
             
+            if(currentMode === 'hide' && isSeeker) { 
+                powerUp = true; powerTimeLeft = 999999; 
+                isRespawning = true; respawnTimeLeft = 10;
+                topHalf.visible = false; bottomHalf.visible = false; auraMesh.visible = false;
+                document.getElementById('respawn-timer').innerText = `SEEKING IN 10s...`;
+                document.getElementById('respawn-timer').style.display = 'block';
+            }
+
             document.getElementById('fruit-indicator').style.display = 'none';
             if(currentMode==='custom' && customSettings) timeLeft = parseInt(customSettings.t);
             else timeLeft = currentMode==='house' ? 9999 : 180 - Math.min(60, currentLevel * 2); 
             
-            document.getElementById('score').innerText = score; document.getElementById('lives').innerText = lives;
+            let isPvpMode = currentMode.includes('pvp') || currentMode === 'hide';
+            document.getElementById('score-label').innerText = isPvpMode ? "ALIVE:" : "SCORE:";
+            document.getElementById('score').innerText = isPvpMode ? (isHost ? (peerConnections.length + 1) : 1) : score; 
             
-            document.getElementById('ui-level-wrapper').style.display = (currentMode.includes('pvp')||currentMode==='house') ? 'none' : 'inline';
-            document.getElementById('ui-dots-wrapper').style.display = (currentMode.includes('pvp')||currentMode==='house'||currentMode==='boss') ? 'none' : 'inline';
+            document.getElementById('lives').innerText = lives;
+            
+            document.getElementById('ui-level-wrapper').style.display = (isPvpMode||currentMode==='house') ? 'none' : 'inline';
+            document.getElementById('ui-dots-wrapper').style.display = (isPvpMode||currentMode==='house'||currentMode==='boss') ? 'none' : 'inline';
             document.getElementById('ui-time-wrapper').style.display = currentMode==='house' ? 'none' : 'inline';
             document.getElementById('bossBarContainer').style.display = currentMode==='boss' ? 'block' : 'none';
             document.getElementById('bossAttackAlert').style.display = 'none';
             
-            if(currentMode === 'pvp' || currentMode === 'comp-pvp') { activePvpPlayers = new Set([myPeerId]); if(isHost) peerConnections.forEach(c => activePvpPlayers.add(c.peer)); }
+            if(isPvpMode) { activePvpPlayers = new Set([myPeerId]); if(isHost) peerConnections.forEach(c => activePvpPlayers.add(c.peer)); document.getElementById('score').innerText = activePvpPlayers.size;}
             
             if(globalAudioObj) { globalAudioObj.pause(); globalAudioObj=null; }
             if(bossMusicInterval) clearInterval(bossMusicInterval);
@@ -754,17 +856,25 @@
             document.getElementById('joystick-container').style.display = 'flex'; document.getElementById('controls-right').style.display = 'flex';
             if(isMultiplayer) document.getElementById('multiplayer-info').style.display = 'block';
             
+            if(currentMode === 'tutorial') {
+                document.getElementById('tutorial-overlay').style.display = 'block';
+                document.getElementById('tutorial-overlay').innerText = "USE JOYSTICK TO MOVE";
+                tutorialDistance = 0; tutGhost = null;
+            }
+
             gameActive = true; allowMovement = false; moveF = 0; moveS = 0;
             const readyScreen = document.getElementById('ready-screen'); const readyText = document.getElementById('ready-text');
-            readyScreen.style.display = 'flex'; readyText.innerText = "READY?"; playSfx(600, 0.4, 'square');
+            readyScreen.style.display = 'flex'; 
+            if(currentMode === 'hide') { readyText.innerText = isSeeker ? "10s SPECTATOR MODE!" : "HIDE!"; } else { readyText.innerText = "READY?"; }
+            playSfx(600, 0.4, 'square');
             
             setTimeout(() => { readyText.innerText = "GO!"; playSfx(1200, 0.4, 'square'); setTimeout(() => { readyScreen.style.display = 'none'; allowMovement = true; startTimerInterval(); }, 500); }, 1500);
         }
 
         function checkCoopAllDead() {
-            if(!isHost || (currentMode!=='coop' && currentMode!=='boss' && currentMode!=='custom')) return;
-            let aliveCount = (lives>0 && !isDying) ? 1 : 0;
-            Object.values(otherPlayers).forEach(op => { if(op.lives>0 && !op.isDying) aliveCount++; });
+            if(!isHost || (currentMode!=='coop' && currentMode!=='boss' && currentMode!=='arcade')) return;
+            let aliveCount = (lives > 0 && !isDying) ? 1 : 0;
+            Object.values(otherPlayers).forEach(op => { if(op.lives > 0 && !op.isDying) aliveCount++; });
             if(aliveCount === 0) { broadcastState('teamDefeated', {}); handleTeamDefeated(); }
         }
         function handleTeamDefeated() { endGame("TEAM DEFEATED!", false); }
@@ -774,26 +884,39 @@
             timerInterval = setInterval(() => {
                 if(!gameActive) return;
                 
-                if(isRespawning && !isDying && respawnTimeLeft !== 9999) {
-                    respawnTimeLeft--;
-                    document.getElementById('respawn-timer').innerText = `RESPAWNING IN ${respawnTimeLeft}s...`;
-                    if(respawnTimeLeft <= 0) {
-                        isRespawning = false; document.getElementById('respawn-timer').style.display = 'none';
-                        allowMovement = true; topHalf.visible = true; bottomHalf.visible = true; auraMesh.visible = true;
+                if(isRespawning && !isDying) {
+                    if (currentMode === 'hide' && isSeeker && respawnTimeLeft > 0 && respawnTimeLeft !== 9999) {
+                        respawnTimeLeft--;
+                        document.getElementById('respawn-timer').innerText = `SEEKING IN ${respawnTimeLeft}s...`;
+                        if(respawnTimeLeft <= 0) {
+                            isRespawning = false; document.getElementById('respawn-timer').style.display = 'none';
+                            playerGroup.position.set(0, 1, 15);
+                            topHalf.visible = true; bottomHalf.visible = true; auraMesh.visible = true;
+                        }
+                    } else if (respawnTimeLeft !== 9999 && currentMode !== 'hide') {
+                        respawnTimeLeft--;
+                        document.getElementById('respawn-timer').innerText = `RESPAWNING IN ${respawnTimeLeft}s...`;
+                        if(respawnTimeLeft <= 0) {
+                            isRespawning = false; document.getElementById('respawn-timer').style.display = 'none';
+                            allowMovement = true; topHalf.visible = true; bottomHalf.visible = true; auraMesh.visible = true;
+                        }
                     }
                 }
 
                 if(!allowMovement || (isRespawning && respawnTimeLeft === 9999)) return;
 
-                if(currentMode!=='house' && !glitchMode) timeLeft--;
+                if(currentMode!=='house' && currentMode!=='tutorial' && !glitchMode) timeLeft--;
                 const m = Math.floor(Math.max(0, timeLeft) / 60), s = (Math.max(0, timeLeft) % 60).toString().padStart(2, '0');
                 document.getElementById('time').innerText = glitchMode ? "GLITCH" : `${m}:${s}`;
                 
-                if(!activeFruit && Math.random()<0.05 && remainingDots<dots.length/2 && !currentMode.includes('pvp') && currentMode!=='house' && currentMode!=='boss') spawnFruit();
+                if(!activeFruit && Math.random()<0.05 && remainingDots<dots.length/2 && !currentMode.includes('pvp') && currentMode!=='hide' && currentMode!=='house' && currentMode!=='boss' && currentMode!=='tutorial') spawnFruit();
                 
-                if(timeLeft <= 0) {
+                if(timeLeft <= 0 && currentMode!=='tutorial') {
                     if ((currentMode === 'pvp' || currentMode === 'comp-pvp') && !glitchMode) {
                         startGlitchMode();
+                    } else if (currentMode === 'hide') {
+                        if(isSeeker) { broadcastState('pvpEnd', { winner: null }); handlePvpEnd(null, "TIME'S UP! HIDERS WIN!"); } 
+                        else { broadcastState('pvpEnd', { winner: myPeerId }); handlePvpEnd(myPeerId, "TIME'S UP! YOU SURVIVED!"); }
                     } else if (currentMode !== 'pvp' && currentMode !== 'comp-pvp') {
                         endGame("TIME'S UP!", false);
                     }
@@ -803,18 +926,12 @@
 
         function endGame(reason, victory) {
             gameActive = false; allowMovement = false; moveF = 0; moveS = 0; glitchMode = false;
-            
-            // Regresar a 3ra persona automáticamente si estabas en 1ra persona al terminar
+            document.getElementById('tutorial-overlay').style.display = 'none';
             if(isFirstPerson) {
-                isFirstPerson = false;
-                document.getElementById('btnCamera').innerText = "CAM: 3RD";
-                cameraPivot.rotation.y = 0;
-                cameraPivot.position.set(0, 0, 0);
-                camera.position.set(0, 2, 5);
-                camera.quaternion.copy(defaultCamQuat);
-                pacmanModel.scale.set(1, 1, 1);
+                isFirstPerson = false; document.getElementById('btnCamera').innerText = "CAM: 3RD";
+                cameraPivot.rotation.y = 0; cameraPivot.position.set(0, 0, 0); camera.position.set(0, 2, 5);
+                camera.quaternion.copy(defaultCamQuat); pacmanModel.scale.set(1, 1, 1);
             }
-
             if(globalAudioObj) { globalAudioObj.pause(); }
             if(bossMusicInterval) clearInterval(bossMusicInterval);
             if(glitchAudioInterval) clearInterval(glitchAudioInterval);
@@ -832,25 +949,57 @@
         }
 
         function checkPvpWinner() {
-            if(currentMode === 'pvp' || currentMode === 'comp-pvp') {
-                if(activePvpPlayers.size === 1) { const wId = Array.from(activePvpPlayers)[0]; broadcastState('pvpEnd', { winner: wId }); handlePvpEnd(wId); } 
+            if(currentMode === 'pvp' || currentMode === 'hide') {
+                if(activePvpPlayers.size === 1) { 
+                    const wId = Array.from(activePvpPlayers)[0]; 
+                    if(currentMode === 'hide' && wId !== hideSeekerId) return; 
+                    broadcastState('pvpEnd', { winner: wId }); handlePvpEnd(wId); 
+                } 
                 else if (activePvpPlayers.size === 0) { broadcastState('pvpEnd', { winner: null }); handlePvpEnd(null); }
+            } else if (currentMode === 'comp-pvp') {
+                let aliveTeams = new Set();
+                activePvpPlayers.forEach(pid => {
+                    let t = (pid === myPeerId) ? myTeam : globalTeamMap[pid];
+                    if(t) aliveTeams.add(t);
+                });
+                if(aliveTeams.size === 1) {
+                    let wTeam = Array.from(aliveTeams)[0];
+                    broadcastState('pvpEnd', { winnerTeam: wTeam }); 
+                    if(wTeam === myTeam) handlePvpEnd(myPeerId, "TEAM VICTORY!");
+                    else handlePvpEnd(null, "YOUR TEAM WAS DEFEATED!");
+                } else if (aliveTeams.size === 0) {
+                    broadcastState('pvpEnd', { winnerTeam: null }); handlePvpEnd(null, "DRAW!");
+                }
             }
         }
 
-        function handlePvpEnd(winnerId) { 
+        function handlePvpEnd(winnerId, customReason = null) { 
             if(winnerId === myPeerId) {
                 if(currentMode === 'comp-pvp') { myTrophies += 30; localStorage.setItem('pacman_trophies', myTrophies); document.getElementById('my-trophies').innerText = myTrophies; }
-                endGame("YOU WON THE PVP MATCH!", true); 
+                endGame(customReason || "YOU WON!", true); 
             } else { 
                 if(currentMode === 'comp-pvp') { myTrophies = Math.max(0, myTrophies - 10); localStorage.setItem('pacman_trophies', myTrophies); document.getElementById('my-trophies').innerText = myTrophies; }
-                endGame(winnerId ? "YOU WERE DEFEATED!" : "DRAW!", false); 
+                endGame(customReason || (winnerId ? "YOU WERE DEFEATED!" : "DRAW!"), false); 
             } 
         }
 
         function addScore(points) {
-            score += points; if (score >= nextLifeScore) { lives++; nextLifeScore += 10000; playSfx(1500, 0.5, 'square'); document.getElementById('lives').innerText = lives; if(isMultiplayer) broadcastState('extraLife', {}); }
-            document.getElementById('score').innerText = score;
+            score += points; 
+            if(!currentMode.includes('pvp') && currentMode !== 'hide') document.getElementById('score').innerText = score;
+            if (score >= nextLifeScore) { 
+                lives++; nextLifeScore += 10000; playSfx(1500, 0.5, 'square'); 
+                document.getElementById('lives').innerText = lives; 
+                if(isMultiplayer && currentMode !== 'coop' && currentMode !== 'boss' && currentMode !== 'arcade') broadcastState('extraLife', {}); 
+            }
+        }
+
+        function applyDebuff() {
+            if(activeDebuff) return;
+            const debuffs = ['invert', 'slow', 'muzzle'];
+            activeDebuff = debuffs[Math.floor(Math.random()*debuffs.length)];
+            debuffTimer = 300; 
+            playSfx(200, 0.5, 'sawtooth');
+            showComboScore("DEBUFF: " + activeDebuff.toUpperCase() + "!", playerGroup.position);
         }
 
         document.querySelectorAll('.color-btn').forEach(btn => {
@@ -860,12 +1009,12 @@
         document.getElementById('btn-single').onclick = () => { 
             lives = 3; score = 0; isMultiplayer=false; currentMode='single'; 
             playerName=document.getElementById('player-name').value||"Player"; 
-            currentMapData = generateMapDataGrid(1);
+            currentMapData = generateMapDataGrid(1, currentMode);
             startGame(1); 
         };
         
         document.getElementById('btn-end-exit').onclick = () => {
-            lives = 3; score = 0; // REINICIAR VIDAS
+            lives = 3; score = 0; activeDebuff = null; isSeeker = false; hideSeekerId = null;
             document.getElementById('end-screen').style.display = 'none'; document.getElementById('start-screen').style.display = 'flex';
             if(peer) { peer.destroy(); peer = null; } peerConnections = []; hostConnection = null;
             Object.keys(otherPlayers).forEach(k => { scene.remove(otherPlayers[k]); scene.remove(otherPlayers[k].dog); if(nameTags[k]) document.body.removeChild(nameTags[k]); delete otherPlayers[k]; });
@@ -900,25 +1049,30 @@
         }
 
         function killGhost(g) {
-            if(g.isDead) return; g.isDead = true; g.children[0].visible = false; 
+            if(g.isDead || g.isSabotage) return; g.isDead = true; g.children[0].visible = false; 
             let pts = killScores[Math.min(ghostKillCombo, killScores.length - 1)]; ghostKillCombo++; addScore(pts); playSfx(1500, 0.2, 'sawtooth'); showComboScore(pts, g.position);
-            if(!isHost && isMultiplayer) hostConnection.send({ type: 'ghostKilled', data: { index: ghosts.indexOf(g) } });
+            if(!isHost && isMultiplayer && hostConnection && hostConnection.open) hostConnection.send({ type: 'ghostKilled', data: { index: ghosts.indexOf(g) } });
         }
 
         function killPlayer() {
-            if(isDying || isRespawning || currentMode==='house') return;
-            playSfx(150, 0.8, 'sawtooth'); lives--; document.getElementById('lives').innerText = lives;
+            if(isDying || isRespawning || currentMode==='house' || currentMode==='tutorial') return;
+            playSfx(150, 0.8, 'sawtooth'); lives--; 
+            
+            document.getElementById('lives').innerText = lives; 
             isDying = true; deathAnimProgress = 0; allowMovement = false; moveF = 0; moveS = 0;
             broadcastState('playerDying', { id: myPeerId, lives: lives });
             
             if (lives <= 0) {
-                isRespawning = true; respawnTimeLeft = 9999; allowMovement = false;
+                isRespawning = true; respawnTimeLeft = 9999; allowMovement = true; 
                 document.getElementById('respawn-timer').innerText = `SPECTATING...`; document.getElementById('respawn-timer').style.display = 'block';
                 if(isMultiplayer) {
                     broadcastState('playerEliminated', { id: myPeerId });
-                    if (isHost && (currentMode === 'pvp' || currentMode === 'comp-pvp')) { activePvpPlayers.delete(myPeerId); checkPvpWinner(); }
+                    if (isHost && (currentMode.includes('pvp') || currentMode === 'hide')) { activePvpPlayers.delete(myPeerId); document.getElementById('score').innerText = activePvpPlayers.size; checkPvpWinner(); }
                     else { checkCoopAllDead(); }
-                } else { if(currentMode !== 'pvp' && currentMode !== 'comp-pvp') endGame("OUT OF LIVES!", false); else endGame("YOU WERE DEFEATED", false); }
+                } else { 
+                    if(!currentMode.includes('pvp') && currentMode !== 'hide') endGame("OUT OF LIVES!", false); 
+                    else endGame("YOU WERE DEFEATED", false); 
+                }
             } else {
                 isRespawning = true; respawnTimeLeft = 3; allowMovement = false;
                 document.getElementById('respawn-timer').innerText = `RESPAWNING IN 3s...`; document.getElementById('respawn-timer').style.display = 'block';
@@ -926,27 +1080,90 @@
             }
         }
 
-        document.getElementById('btnDash').addEventListener('touchstart', (e) => {
+        const handleDashBtn = (e) => {
             e.preventDefault();
+            if(activeDebuff === 'muzzle') return;
             if(dashCooldown <= 0 && allowMovement && !isDying) {
                 dashActive = 10; dashCooldown = 150; playSfx(800, 0.2, 'triangle');
+                if(currentMode === 'tutorial' && tutorialStep === 3) {
+                    tutorialStep++; document.getElementById('tutorial-overlay').innerText = "SURVIVE THE GHOST!";
+                    tutGhost = createGhost(ghostTypes[0]); tutGhost.position.set(0,0,-10); mapGroup.add(tutGhost); ghosts.push(tutGhost);
+                    setTimeout(()=>{ endGame("TUTORIAL COMPLETE!", true); }, 5000);
+                }
             }
-        });
+        };
+        const btnD = document.getElementById('btnDash');
+        btnD.addEventListener('touchstart', handleDashBtn);
+        btnD.addEventListener('mousedown', handleDashBtn);
 
         document.querySelectorAll('.btn').forEach(b => {
             if(b.id === 'btnDash' || b.id === 'btnCamera') return;
-            b.addEventListener('touchstart', (e) => { e.preventDefault(); if(!allowMovement) return; if(b.id === 'rotLeft') isRotL = true; if(b.id === 'rotRight') isRotR = true; if(b.id === 'rotUp') isRotU = true; if(b.id === 'rotDown') isRotD = true; if(b.id === 'btnJump' && !isJumping) { velocityY = 0.25; isJumping = true; playSfx(400, 0.2, 'square'); } });
-            b.addEventListener('touchend', (e) => { e.preventDefault(); isRotL = isRotR = isRotU = isRotD = false; });
+            
+            const handleBtnPress = (e) => { 
+                e.preventDefault(); 
+                if(!allowMovement) return; 
+                let simL = isRotL, simR = isRotR, simU = isRotU, simD = isRotD;
+                if(b.id === 'rotLeft') isRotL = activeDebuff === 'invert' ? false : true; 
+                if(b.id === 'rotRight') isRotR = activeDebuff === 'invert' ? false : true; 
+                if(b.id === 'rotUp') isRotU = activeDebuff === 'invert' ? false : true; 
+                if(b.id === 'rotDown') isRotD = activeDebuff === 'invert' ? false : true; 
+                
+                if(activeDebuff === 'invert') {
+                    if(b.id === 'rotLeft') isRotR = true;
+                    if(b.id === 'rotRight') isRotL = true;
+                    if(b.id === 'rotUp') isRotD = true;
+                    if(b.id === 'rotDown') isRotU = true;
+                }
+
+                if(b.id === 'btnJump' && !isJumping && !isSpectatorMode()) { velocityY = 0.25; isJumping = true; playSfx(400, 0.2, 'square'); } 
+                
+                if(currentMode === 'tutorial' && tutorialStep === 1 && b.id === 'btnJump') {
+                    tutorialStep++; document.getElementById('tutorial-overlay').innerText = "SWITCH CAM TO 1ST PERSON";
+                }
+            };
+
+            const handleBtnRelease = (e) => {
+                e.preventDefault();
+                if(b.id === 'rotLeft' || b.id === 'rotRight') { isRotL = false; isRotR = false; }
+                if(b.id === 'rotUp' || b.id === 'rotDown') { isRotU = false; isRotD = false; }
+            };
+
+            b.addEventListener('touchstart', handleBtnPress);
+            b.addEventListener('mousedown', handleBtnPress);
+            b.addEventListener('touchend', handleBtnRelease);
+            b.addEventListener('mouseup', handleBtnRelease);
+            b.addEventListener('mouseleave', handleBtnRelease);
         });
 
+        let joyActive = false;
+        const jCont = document.getElementById('joystick-container');
+        const updateJoy = (clientX, clientY) => {
+            const r = jCont.getBoundingClientRect();
+            let dx = clientX - (r.left+50), dy = clientY - (r.top+50);
+            const d = Math.sqrt(dx*dx+dy*dy) || 1;
+            moveS = (dx/d) * 0.15; moveF = (dy/d) * 0.15;
+            if(activeDebuff === 'invert') { moveS = -moveS; moveF = -moveF; }
+            document.getElementById('joystick-knob').style.transform = `translate(${(dx/d)*Math.min(d,40)/2}px, ${(dy/d)*Math.min(d,40)/2}px)`;
+        };
+        const resetJoy = () => {
+            moveF = moveS = 0; joyActive = false;
+            document.getElementById('joystick-knob').style.transform = 'translate(0,0)';
+        };
+
         window.addEventListener('touchmove', (e) => {
-            if(!gameActive || !allowMovement) return; const t = Array.from(e.touches).find(t => t.clientX < window.innerWidth / 2);
-            if (t) {
-                const r = document.getElementById('joystick-container').getBoundingClientRect(); let dx = t.clientX - (r.left+50), dy = t.clientY - (r.top+50); const d = Math.sqrt(dx*dx+dy*dy) || 1;
-                moveS = (dx/d) * 0.15; moveF = (dy/d) * 0.15; document.getElementById('joystick-knob').style.transform = `translate(${(dx/d)*Math.min(d,40)/2}px, ${(dy/d)*Math.min(d,40)/2}px)`;
-            }
+            if(!gameActive || !allowMovement) return;
+            const t = Array.from(e.touches).find(t => t.clientX < window.innerWidth / 2);
+            if (t) updateJoy(t.clientX, t.clientY);
         }, {passive: false});
-        window.addEventListener('touchend', (e) => { const hasLeftTouch = Array.from(e.touches).some(t => t.clientX < window.innerWidth/2); if(!hasLeftTouch) { moveF = moveS = 0; document.getElementById('joystick-knob').style.transform = 'translate(0,0)'; } });
+
+        window.addEventListener('touchend', (e) => {
+            const hasLeftTouch = Array.from(e.touches).some(t => t.clientX < window.innerWidth/2);
+            if(!hasLeftTouch) resetJoy();
+        });
+
+        jCont.addEventListener('mousedown', (e) => { if(gameActive && allowMovement) { joyActive = true; updateJoy(e.clientX, e.clientY); } });
+        window.addEventListener('mousemove', (e) => { if(joyActive) updateJoy(e.clientX, e.clientY); });
+        window.addEventListener('mouseup', () => { if(joyActive) resetJoy(); });
 
         function checkCol(p, isPlayer=false) { 
             const wCol = walls.some(w => new THREE.Box3().setFromCenterAndSize(p, new THREE.Vector3(1.6,1.6,1.6)).intersectsBox(w)); 
@@ -954,14 +1171,17 @@
             return wCol || gCol;
         }
 
-        // --- Multiplayer PeerJS ---
         function updateLobbyCount() {
             let count = isHost ? (peerConnections.length + 1) : 1; 
             document.getElementById('lobby-count').innerText = count; document.getElementById('mp-count').innerText = count;
             document.getElementById('lobby-max').innerText = maxPlayersForMode[currentMode] || 4;
             if (isHost) {
                 const startBtn = document.getElementById('btn-lobby-start');
-                if (count >= (currentMode==='boss'?1:2) || currentMode==='house' || currentMode==='custom') { startBtn.style.opacity = '1'; startBtn.disabled = false; } 
+                let minToStart = 2;
+                if(currentMode === 'boss' || currentMode === 'house' || currentMode === 'custom' || currentMode === 'arcade' || currentMode === 'single' || currentMode === 'tutorial') minToStart = 1;
+                if(currentMode === 'comp-pvp') minToStart = 4;
+                
+                if (count >= minToStart) { startBtn.style.opacity = '1'; startBtn.disabled = false; } 
                 else { startBtn.style.opacity = '0.5'; startBtn.disabled = true; }
                 broadcastState('lobbyUpdate', { count: count });
             }
@@ -979,7 +1199,6 @@
                 let max = maxPlayersForMode[currentMode] || 4;
                 if(isHost && peerConnections.length < max-1) {
                     peerConnections.push(conn); updateLobbyCount(); setupConnEvents(conn);
-                    // Map is synced on start for proper initialization
                 }
             });
         }
@@ -991,32 +1210,40 @@
                     if(!otherPlayers[pid]) otherPlayers[pid] = createOtherPlayerMesh(msg.data.color);
                     const op = otherPlayers[pid]; op.position.set(msg.data.x, msg.data.y, msg.data.z); op.rotation.y = msg.data.ry; op.name = msg.data.n; op.lives = msg.data.lives; op.hasDog = msg.data.dog; op.color = msg.data.color;
                     op.auraMesh.material.color.setHex(msg.data.auraCol); op.auraMesh.material.opacity = msg.data.auraOp; setExpression(op.model, msg.data.expr); op.timers = msg.data.timers;
-                    if(!op.isDying && !op.children[0].visible && op.lives > 0) { op.children[0].visible = true; op.children[1].visible = true; op.auraMesh.visible = true; op.children[0].rotation.x = 0; op.children[1].rotation.x = 0; }
-                    if(isHost) { peerConnections.forEach(c => { if (c.peer !== pid) c.send(msg); }); }
+                    if(msg.data.team !== undefined) op.team = msg.data.team;
+                    if(msg.data.v !== undefined && !op.isDying) { op.children[0].visible = msg.data.v; op.children[1].visible = msg.data.v; op.auraMesh.visible = msg.data.v; }
+                    if(isHost) { peerConnections.forEach(c => { if (c.peer !== pid && c.open) c.send(msg); }); }
                 } 
-                else if(msg.type === 'chat') { addChatMsg(msg.data.name, msg.data.text); if(isHost) { peerConnections.forEach(c => { if(c.peer !== msg.data.senderId && c.peer !== msg.peer) c.send(msg); }); } }
-                else if(msg.type === 'reaction') { triggerReaction(msg.data.id, msg.data.emoji); if(isHost) { peerConnections.forEach(c => { if(c.peer !== msg.data.id) c.send(msg); }); } } 
+                else if(msg.type === 'chat') { addChatMsg(msg.data.name, msg.data.text); if(isHost) { peerConnections.forEach(c => { if(c.peer !== msg.data.senderId && c.peer !== msg.peer && c.open) c.send(msg); }); } }
+                else if(msg.type === 'reaction') { triggerReaction(msg.data.id, msg.data.emoji); if(isHost) { peerConnections.forEach(c => { if(c.peer !== msg.data.id && c.open) c.send(msg); }); } } 
                 else if(msg.type === 'eatDot' && isHost) {
                     const d = dots[msg.data.dIndex]; 
                     if(d && d.visible) {
-                        d.visible = false; if(d.pType !== 2 || (!currentMode.includes('pvp'))) remainingDots--; document.getElementById('remaining').innerText = remainingDots;
+                        d.visible = false; if(d.pType !== 2 || (!currentMode.includes('pvp') && currentMode !== 'hide')) remainingDots--; 
+                        if(!currentMode.includes('pvp') && currentMode !== 'hide') document.getElementById('remaining').innerText = remainingDots;
+                        
                         if(currentMode.includes('pvp') && d.pType === 2) d.respawnTimer = 900;
                         if(currentMode === 'boss' && d.pType === 2) d.respawnTimer = 600;
                         if(currentMode.includes('pvp')) { let normalDotsLeft = dots.filter(x => x.pType === 0 && x.visible).length; if(normalDotsLeft === 0) { dots.forEach(x => { if(x.pType === 0) x.visible = true; }); broadcastState('respawnNormalDots', {}); } }
                         broadcastState('dotHide', { dIndex: msg.data.dIndex, rem: remainingDots });
                         
-                        if(remainingDots <= 0 && (!currentMode.includes('pvp')) && currentMode !== 'boss' && currentMode !== 'house') {
+                        if(remainingDots <= 0 && !currentMode.includes('pvp') && currentMode !== 'hide' && currentMode !== 'boss' && currentMode !== 'house') {
                             gameActive = false; allowMovement = false; moveF = 0; moveS = 0; showComboScore("LEVEL CLEARED! NEXT IN 3s...", playerGroup.position);
-                            if(['single', 'coop', 'pvp', 'comp-pvp'].includes(currentMode)) { currentMapData = generateMapDataGrid(currentLevel + 1); }
+                            if(['single', 'coop', 'pvp', 'comp-pvp', 'hide', 'arcade'].includes(currentMode)) { currentMapData = generateMapDataGrid(currentLevel + 1, currentMode); }
+                            
+                            if(currentMode === 'arcade') {
+                                let maxU = parseInt(localStorage.getItem('pacman_arcade_max') || '1');
+                                if(currentLevel + 1 > maxU && currentLevel + 1 <= 256) localStorage.setItem('pacman_arcade_max', currentLevel + 1);
+                                if(currentLevel >= 256) { endGame("ARCADE COMPLETED! YOU ARE A LEGEND!", true); return; }
+                            }
+
                             broadcastState('coopNextLevel', {level: currentLevel + 1, grid: currentMapData});
-                            if (currentMode === 'coop' && lives <= 0) { lives = 1; document.getElementById('lives').innerText = lives; isDying=false; isRespawning=false;}
                             setTimeout(() => { startGame(currentLevel + 1); }, 3000);
                         }
                     }
                 } 
                 else if(msg.type === 'coopNextLevel' && !isHost) { 
                     gameActive = false; allowMovement = false; moveF = 0; moveS = 0; showComboScore("LEVEL CLEARED! NEXT IN 3s...", playerGroup.position); 
-                    if (currentMode === 'coop' && lives <= 0) { lives = 1; document.getElementById('lives').innerText = lives; isDying=false; isRespawning=false;}
                     if(msg.data.grid) currentMapData = msg.data.grid;
                     setTimeout(() => { startGame(msg.data.level); }, 3000); 
                 }
@@ -1033,41 +1260,64 @@
                 else if(msg.type === 'bossHp' && !isHost) { bossHp = msg.data.hp; }
                 else if(msg.type === 'bossNextLevel' && !isHost) { gameActive = false; allowMovement = false; moveF = 0; moveS = 0; showComboScore("BOSS DOWN! NEXT IN 3s...", playerGroup.position); setTimeout(() => { startGame(msg.data.level); }, 3000); }
                 else if(msg.type === 'bossDead' && !isHost) { endGame("BOSS RUSH COMPLETED!", true); }
-                else if(msg.type === 'glitchSync' && !isHost) { if(!glitchMode && currentMode.includes('pvp')) { startGlitchMode(); document.getElementById('time').innerText = "GLITCH"; } }
+                else if(msg.type === 'glitchSync' && !isHost) { if(!glitchMode && (currentMode.includes('pvp') || currentMode==='hide')) { startGlitchMode(); document.getElementById('time').innerText = "GLITCH"; } }
                 else if(msg.type === 'ghostSync' && !isHost) { msg.data.forEach((gd, i) => { if(ghosts[i]) { ghosts[i].position.set(gd.x, gd.y, gd.z); ghosts[i].lookAt(gd.tx, 0.6, gd.tz); ghosts[i].isDead = gd.isDead; if(gd.isDead) ghosts[i].children[0].visible = false; else ghosts[i].children[0].visible = true; } }); }
                 else if(msg.type === 'bossSync' && !isHost) { if(theBoss){ theBoss.position.set(msg.data.x, msg.data.y, msg.data.z); theBoss.lookAt(msg.data.tx, 0.6, msg.data.tz); } }
-                else if(msg.type === 'dotHide' && !isHost) { if(dots[msg.data.dIndex]) dots[msg.data.dIndex].visible = false; remainingDots = msg.data.rem; document.getElementById('remaining').innerText = remainingDots; } 
+                else if(msg.type === 'dotHide' && !isHost) { if(dots[msg.data.dIndex]) dots[msg.data.dIndex].visible = false; remainingDots = msg.data.rem; if(!currentMode.includes('pvp') && currentMode!=='hide') document.getElementById('remaining').innerText = remainingDots; } 
                 else if(msg.type === 'dotShow' && !isHost) { if(dots[msg.data.dIndex]) dots[msg.data.dIndex].visible = true; } 
                 else if(msg.type === 'respawnNormalDots' && !isHost) { dots.forEach(x => { if(x.pType === 0) x.visible = true; }); } 
                 else if(msg.type === 'playerDying') {
                     if(otherPlayers[msg.data.id]) { otherPlayers[msg.data.id].isDying = true; otherPlayers[msg.data.id].deathAnimProgress = 0; otherPlayers[msg.data.id].lives = msg.data.lives; }
-                    if(isHost) { peerConnections.forEach(c => { if(c.peer !== msg.data.id) c.send(msg); }); checkCoopAllDead(); }
+                    if(isHost) { peerConnections.forEach(c => { if(c.peer !== msg.data.id && c.open) c.send(msg); }); checkCoopAllDead(); }
                 } 
-                else if(msg.type === 'playerEliminated') { if (isHost) { if(currentMode.includes('pvp')) {activePvpPlayers.delete(msg.data.id); checkPvpWinner(); } else { checkCoopAllDead(); } } } 
+                else if(msg.type === 'playerEliminated') { 
+                    if (isHost) { 
+                        if(currentMode.includes('pvp') || currentMode === 'hide') {activePvpPlayers.delete(msg.data.id); document.getElementById('score').innerText = activePvpPlayers.size; checkPvpWinner(); } 
+                        else { checkCoopAllDead(); } 
+                    } 
+                } 
                 else if(msg.type === 'teamDefeated' && !isHost) { handleTeamDefeated(); }
-                else if(msg.type === 'pvpEnd' && !isHost) { handlePvpEnd(msg.data.winner); } 
+                else if(msg.type === 'pvpEnd' && !isHost) { 
+                    if (currentMode === 'comp-pvp') {
+                        if (msg.data.winnerTeam === myTeam) handlePvpEnd(myPeerId, "TEAM VICTORY!");
+                        else handlePvpEnd(null, "YOUR TEAM WAS DEFEATED!");
+                    } else {
+                        handlePvpEnd(msg.data.winner); 
+                    }
+                } 
                 else if(msg.type === 'extraLife') { lives++; document.getElementById('lives').innerText = lives; playSfx(1500, 0.5, 'square'); } 
                 else if(msg.type === 'lobbyUpdate' && !isHost) { document.getElementById('lobby-count').innerText = msg.data.count; document.getElementById('mp-count').innerText = msg.data.count; } 
                 else if(msg.type === 'startGameLobby' && !isHost) { 
                     currentLevel = msg.data.level; currentMode = msg.data.mode; chatEnabled = msg.data.chat; 
                     if(msg.data.grid) currentMapData = msg.data.grid;
                     if(msg.data.cData) customSettings = msg.data.cData;
+                    if(currentMode === 'hide') { hideSeekerId = msg.data.sId; isSeeker = (myPeerId === hideSeekerId); }
+                    if(msg.data.teams) { globalTeamMap = msg.data.teams; myTeam = globalTeamMap[myPeerId]; }
                     startGame(currentLevel); 
                 } 
                 else if(msg.type === 'playerLeft' && !isHost) { if(otherPlayers[msg.data.id]) { scene.remove(otherPlayers[msg.data.id]); scene.remove(otherPlayers[msg.data.id].dog); if(nameTags[msg.data.id]) document.body.removeChild(nameTags[msg.data.id]); if(nameTags[msg.data.id+'_dog']) document.body.removeChild(nameTags[msg.data.id+'_dog']); delete otherPlayers[msg.data.id]; } }
+                else if(msg.type === 'revived') { 
+                    if(otherPlayers[msg.data.id]) { 
+                        otherPlayers[msg.data.id].lives = 1; otherPlayers[msg.data.id].isDying = false; 
+                        otherPlayers[msg.data.id].deathAnimProgress = 0;
+                        otherPlayers[msg.data.id].children[0].visible = true; otherPlayers[msg.data.id].children[1].visible = true; otherPlayers[msg.data.id].auraMesh.visible = true; 
+                        otherPlayers[msg.data.id].children[0].rotation.x = 0; otherPlayers[msg.data.id].children[1].rotation.x = 0;
+                    } 
+                }
             });
             conn.on('close', () => {
                 const pid = conn.peer;
                 if(otherPlayers[pid]) { scene.remove(otherPlayers[pid]); scene.remove(otherPlayers[pid].dog); if(nameTags[pid]) document.body.removeChild(nameTags[pid]); if(nameTags[pid+'_dog']) document.body.removeChild(nameTags[pid+'_dog']); delete otherPlayers[pid]; }
-                if(isHost) { peerConnections = peerConnections.filter(c => c !== conn); updateLobbyCount(); broadcastState('playerLeft', { id: pid }); if(currentMode.includes('pvp') && gameActive) { activePvpPlayers.delete(pid); checkPvpWinner(); } else { checkCoopAllDead(); } }
+                if(isHost) { peerConnections = peerConnections.filter(c => c !== conn); updateLobbyCount(); broadcastState('playerLeft', { id: pid }); if((currentMode.includes('pvp') || currentMode==='hide') && gameActive) { activePvpPlayers.delete(pid); document.getElementById('score').innerText = activePvpPlayers.size; checkPvpWinner(); } else { checkCoopAllDead(); } }
             });
         }
 
         function setupHostMode(mode) {
-            lives = 3; score = 0;
+            lives = 3; score = 0; activeDebuff = null;
             playerName = document.getElementById('player-name').value || "Player"; currentMode = mode; isMultiplayer = true; isHost = true; 
             document.getElementById('start-screen').style.display = 'none'; document.getElementById('lobby-screen').style.display = 'flex'; document.getElementById('workshop-modal').style.display = 'none';
-            document.getElementById('lobby-mode-text').innerText = mode.toUpperCase() + " MODE"; document.getElementById('lobby-id').innerText = "Generating...";
+            document.getElementById('lobby-mode-text').innerText = mode === 'arcade' ? `ARCADE MODE (LVL ${arcadeSelectedLevel})` : mode.toUpperCase() + " MODE"; 
+            document.getElementById('lobby-id').innerText = "Generating...";
             document.getElementById('qrcode-container').style.display = 'none'; document.getElementById('btn-lobby-start').style.display = 'block'; document.getElementById('lobby-waiting-msg').style.display = 'none';
             document.getElementById('host-options').style.display = 'block';
             peerConnections = []; updateLobbyCount(); peer = new Peer(); setupPeerEvents(peer);
@@ -1076,11 +1326,12 @@
         document.getElementById('btn-host-coop').onclick = () => setupHostMode('coop');
         document.getElementById('btn-host-pvp').onclick = () => setupHostMode('pvp');
         document.getElementById('btn-host-comp').onclick = () => setupHostMode('comp-pvp');
+        document.getElementById('btn-host-hide').onclick = () => setupHostMode('hide');
         document.getElementById('btn-host-boss').onclick = () => setupHostMode('boss');
         document.getElementById('btn-house').onclick = () => setupHostMode('house');
 
         document.getElementById('btn-join').onclick = () => {
-            lives = 3; score = 0;
+            lives = 3; score = 0; activeDebuff = null;
             const hostId = document.getElementById('join-id').value; if(!hostId) return;
             playerName = document.getElementById('player-name').value || "Player"; isMultiplayer = true; isHost = false; 
             document.getElementById('start-screen').style.display = 'none'; document.getElementById('lobby-screen').style.display = 'flex';
@@ -1090,28 +1341,53 @@
             peer.on('open', id => { myPeerId = id; hostConnection = peer.connect(hostId); setupConnEvents(hostConnection); hostConnection.on('open', () => { document.getElementById('mp-id').innerText = hostId; }); hostConnection.on('close', () => { document.getElementById('btn-end-exit').click(); }); });
         };
 
-        document.getElementById('btn-lobby-leave').onclick = () => { lives = 3; score = 0; if(peer) { peer.destroy(); peer = null; } peerConnections = []; hostConnection = null; document.getElementById('lobby-screen').style.display = 'none'; document.getElementById('start-screen').style.display = 'flex'; };
+        document.getElementById('btn-lobby-leave').onclick = () => { lives = 3; score = 0; activeDebuff = null; if(peer) { peer.destroy(); peer = null; } peerConnections = []; hostConnection = null; document.getElementById('lobby-screen').style.display = 'none'; document.getElementById('start-screen').style.display = 'flex'; };
 
         document.getElementById('btn-lobby-start').onclick = () => { 
             if (peerConnections.length >= 0) { 
                 chatEnabled = document.getElementById('cb-chat-enable').checked; 
-                if(['single', 'coop', 'pvp', 'comp-pvp'].includes(currentMode)) {
-                    currentMapData = generateMapDataGrid(1);
+                if(['single', 'coop', 'pvp', 'comp-pvp', 'hide', 'arcade'].includes(currentMode)) {
+                    currentMapData = generateMapDataGrid(1, currentMode);
                 }
-                let dMsg = { level: 1, mode: currentMode, chat: chatEnabled };
+                
+                let dMsg = { level: (currentMode === 'arcade' ? arcadeSelectedLevel : 1), mode: currentMode, chat: chatEnabled };
+                
+                if (currentMode === 'hide') {
+                    let allP = [myPeerId, ...peerConnections.map(c=>c.peer)];
+                    hideSeekerId = allP[Math.floor(Math.random() * allP.length)];
+                    dMsg.sId = hideSeekerId;
+                    isSeeker = (myPeerId === hideSeekerId);
+                }
+                
+                if (currentMode === 'comp-pvp') {
+                    let allP = [myPeerId, ...peerConnections.map(c=>c.peer)];
+                    let tMap = {};
+                    allP.forEach((p, i) => tMap[p] = (i % 2) + 1);
+                    dMsg.teams = tMap;
+                    globalTeamMap = tMap;
+                    myTeam = tMap[myPeerId];
+                }
+
                 if (currentMapData) dMsg.grid = currentMapData;
                 if (currentMode === 'custom') dMsg.cData = customSettings;
                 broadcastState('startGameLobby', dMsg); 
-                startGame(1); 
+                startGame(dMsg.level); 
             } 
         };
 
         function processDotConsumption(d, isLocalPlayer) {
-            d.visible = false; if(d.pType !== 2 || !currentMode.includes('pvp')) { remainingDots--; }
+            if(activeDebuff === 'muzzle') return; 
+            d.visible = false; if(d.pType !== 2 || (!currentMode.includes('pvp') && currentMode !== 'hide')) { remainingDots--; }
             if(isLocalPlayer) {
-                addScore(10); document.getElementById('remaining').innerText = remainingDots; dotSoundToggle = !dotSoundToggle; playSfx(dotSoundToggle ? 450 : 350, 0.1, 'triangle'); happyTimer = 60; 
+                addScore(10); if(!currentMode.includes('pvp') && currentMode !== 'hide') document.getElementById('remaining').innerText = remainingDots; 
+                dotSoundToggle = !dotSoundToggle; playSfx(dotSoundToggle ? 450 : 350, 0.1, 'triangle'); happyTimer = 60; 
                 if(currentMode.includes('pvp') && d.pType === 0) pacSpeedBoost += 0.005;
                 broadcastState('eatDot', { dIndex: d.dIndex });
+                if(currentMode === 'tutorial' && tutorialStep === 2) {
+                    if(remainingDots <= 0) {
+                        tutorialStep++; document.getElementById('tutorial-overlay').innerText = "USE DASH TO ESCAPE";
+                    }
+                }
             }
             if(isHost) {
                 broadcastState('dotHide', { dIndex: d.dIndex, rem: remainingDots });
@@ -1119,14 +1395,20 @@
                 if (currentMode === 'boss' && d.pType === 2) d.respawnTimer = 600;
                 if (currentMode.includes('pvp')) { let nL = dots.filter(x => x.pType === 0 && x.visible).length; if(nL === 0) { dots.forEach(x => { if(x.pType === 0) x.visible = true; }); broadcastState('respawnNormalDots', {}); } }
             }
-            if(isLocalPlayer) { if(d.pType === 2) { powerUp = true; powerTimeLeft = 7000; ghostKillCombo = 0; document.getElementById('powerBarContainer').style.display='block'; playSfx(600,0.5,'sine'); } }
+            if(isLocalPlayer) { if(d.pType === 2 && currentMode !== 'hide') { powerUp = true; powerTimeLeft = 7000; ghostKillCombo = 0; document.getElementById('powerBarContainer').style.display='block'; playSfx(600,0.5,'sine'); } }
             
-            if(remainingDots <= 0 && isLocalPlayer && !currentMode.includes('pvp') && currentMode !== 'boss' && currentMode !== 'house') {
+            if(remainingDots <= 0 && isLocalPlayer && !currentMode.includes('pvp') && currentMode !== 'hide' && currentMode !== 'boss' && currentMode !== 'house' && currentMode !== 'tutorial') {
                 gameActive = false; allowMovement = false; moveF = 0; moveS = 0; showComboScore("LEVEL CLEARED! NEXT IN 3s...", playerGroup.position);
+                
+                if(currentMode === 'arcade') {
+                    let maxU = parseInt(localStorage.getItem('pacman_arcade_max') || '1');
+                    if(currentLevel + 1 > maxU && currentLevel + 1 <= 256) localStorage.setItem('pacman_arcade_max', currentLevel + 1);
+                    if(currentLevel >= 256) { endGame("ARCADE COMPLETED! YOU ARE A LEGEND!", true); return; }
+                }
+
                 if(isHost || !isMultiplayer) {
-                    if(['single', 'coop', 'pvp', 'comp-pvp'].includes(currentMode)) currentMapData = generateMapDataGrid(currentLevel + 1);
+                    if(['single', 'coop', 'pvp', 'comp-pvp', 'hide', 'arcade'].includes(currentMode)) currentMapData = generateMapDataGrid(currentLevel + 1, currentMode);
                     if(isMultiplayer) broadcastState('coopNextLevel', {level: currentLevel + 1, grid: currentMapData});
-                    if (currentMode === 'coop' && lives <= 0) { lives = 1; document.getElementById('lives').innerText = lives; isDying=false; isRespawning=false;}
                     setTimeout(() => { startGame(currentLevel + 1); }, 3000);
                 }
             }
@@ -1149,6 +1431,7 @@
                 deathAnimProgress += 0.05; topHalf.rotation.x = -Math.min(deathAnimProgress, Math.PI / 2); bottomHalf.rotation.x = Math.min(deathAnimProgress, Math.PI / 2); pacmanModel.rotation.y += 0.15; 
                 if (deathAnimProgress >= Math.PI / 2) {
                     isDying = false; topHalf.visible = false; bottomHalf.visible = false; auraMesh.visible = false; playerGroup.position.set(0, 1, 15); pacSpeedBoost = 0; dashActive = 0; 
+                    if (lives <= 0) allowMovement = true; 
                 }
             }
 
@@ -1165,18 +1448,51 @@
             }
 
             let targetAuraOp = 0, targetAuraCol = 0x000000, myExpr = 'normal';
+            let allyWithPower = false;
+            if (currentMode === 'coop' || currentMode === 'arcade' || currentMode === 'boss' || currentMode === 'comp-pvp') {
+                Object.values(otherPlayers).forEach(op => { 
+                    if (currentMode === 'comp-pvp' && op.team !== myTeam) return; 
+                    if (!op.isDying && op.children[0].visible && op.timers && op.timers.p > 0 && op.position.distanceTo(playerGroup.position) < 8) allyWithPower = true; 
+                });
+            }
+
             const hue = (Date.now() % 2000) / 2000, rainbowHex = new THREE.Color().setHSL(hue, 1, 0.5).getHex();
             if (powerUp) { targetAuraCol = rainbowHex; targetAuraOp = 0.6; myExpr = 'determined'; }
+            if (activeDebuff) { targetAuraCol = 0x32cd32; targetAuraOp = 0.8; myExpr = 'scared'; debuffTimer--; if(debuffTimer<=0) activeDebuff = null; }
             if (happyTimer > 0) happyTimer--;
+            
             if (targetAuraOp === 0 && !isDying) {
                 let ghostNear = ghosts.some(g => !g.isDead && g.position.distanceTo(playerGroup.position) < 6) || (theBoss && theBoss.position.distanceTo(playerGroup.position) < 8);
-                let playerNear = currentMode.includes('pvp') && Object.values(otherPlayers).some(op => !op.isDying && op.children[0].visible && op.timers && op.timers.p > 0 && op.position.distanceTo(playerGroup.position) < 8);
-                if(ghostNear || playerNear) myExpr = 'scared'; else if(happyTimer > 0) myExpr = 'happy'; else myExpr = 'calm';
+                let playerNear = (currentMode === 'pvp' || currentMode === 'hide' || currentMode === 'comp-pvp') && Object.values(otherPlayers).some(op => {
+                    if (currentMode === 'comp-pvp' && op.team === myTeam) return false;
+                    return !op.isDying && op.children[0].visible && op.timers && op.timers.p > 0 && op.position.distanceTo(playerGroup.position) < 8;
+                });
+                
+                if(ghostNear || playerNear) myExpr = 'scared'; 
+                else if(allyWithPower || happyTimer > 0) myExpr = 'happy'; 
+                else myExpr = 'calm';
             }
             auraMesh.material.color.setHex(targetAuraCol); auraMesh.material.opacity = targetAuraOp; setExpression(pacmanModel, myExpr);
 
-            // Dog Ability Logic
-            if(dogEquipped && topHalf.visible && !isDying && allowMovement) {
+            const spectator = isSpectatorMode();
+
+            if (lives <= 0 && isRespawning && (currentMode === 'coop' || currentMode === 'boss' || currentMode === 'arcade')) {
+                let revived = false;
+                Object.values(otherPlayers).forEach(op => {
+                    if (op.lives > 0 && !op.isDying && op.children[0].visible) {
+                        if (playerGroup.position.distanceTo(op.position) < 2.0) revived = true;
+                    }
+                });
+                if (revived) {
+                    lives = 1; isRespawning = false; respawnTimeLeft = 0; document.getElementById('respawn-timer').style.display = 'none';
+                    topHalf.visible = true; bottomHalf.visible = true; auraMesh.visible = true; isDying = false; happyTimer = 180;
+                    deathAnimProgress = 0; topHalf.rotation.x = 0; bottomHalf.rotation.x = 0; pacmanModel.rotation.y = 0; 
+                    document.getElementById('lives').innerText = lives; playSfx(1500, 0.5, 'square'); showComboScore("REVIVED!", playerGroup.position);
+                    broadcastState('revived', { id: myPeerId });
+                }
+            }
+
+            if(dogEquipped && topHalf.visible && !isDying && allowMovement && !spectator) {
                 dogAbilityTimer--;
                 if(dogAbilityTimer <= 0) {
                     dogAbilityTimer = 900; 
@@ -1187,7 +1503,6 @@
                 }
             }
 
-            // Glitch Muerte Subita update
             if(glitchMode && allowMovement) {
                 glitchBounds -= 0.02;
                 if(glitchMeshLeft && glitchMeshRight) {
@@ -1195,15 +1510,11 @@
                     glitchMeshRight.position.set(glitchBounds + 15, 2, 0);
                 }
                 if(playerGroup.position.x > glitchBounds || playerGroup.position.x < -glitchBounds) {
-                    if(!isDying && topHalf.visible) {
-                        lives = 0; // INSTANT DEATH
-                        killPlayer();
-                    }
+                    if(!isDying && topHalf.visible && !spectator) { lives = 0; killPlayer(); }
                 }
                 if(isHost) broadcastState('glitchSync', {});
             }
 
-            // Floating UIs
             for (let id in activeReactions) {
                 let r = activeReactions[id];
                 if (Date.now() > r.expireTime) { document.body.removeChild(r.element); delete activeReactions[id]; } 
@@ -1218,24 +1529,22 @@
             if(topHalf.visible && !isDying) { updateNameTag(myPeerId, playerName, playerGroup.position); if(dogEquipped) updateNameTag(myPeerId, "Pac-Dog", myDog.position, true); } else { if(nameTags[myPeerId]) nameTags[myPeerId].style.display = 'none'; if(nameTags[myPeerId+'_dog']) nameTags[myPeerId+'_dog'].style.display = 'none'; }
             Object.keys(otherPlayers).forEach(k => { let op = otherPlayers[k]; if(!op.isDying && op.children[0].visible) { updateNameTag(k, op.name, op.position); if(op.hasDog) updateNameTag(k, "Pac-Dog", op.dog.position, true); } else { if(nameTags[k]) nameTags[k].style.display = 'none'; if(nameTags[k+'_dog']) nameTags[k+'_dog'].style.display = 'none'; } });
 
-            // Dogs Rendering (Cuidar que no se vea en 1ra persona)
             if(!isDying && topHalf.visible && dogEquipped && !isFirstPerson) { myDog.visible = true; myDog.position.lerp(playerGroup.position.clone().add(new THREE.Vector3(-1, 0, -1).applyAxisAngle(new THREE.Vector3(0,1,0), playerGroup.rotation.y)), 0.1); myDog.lookAt(playerGroup.position); } else { myDog.visible = false; }
             Object.keys(otherPlayers).forEach(k => { let op = otherPlayers[k]; if(!op.isDying && op.children[0].visible && op.hasDog) { op.dog.visible=true; op.dog.position.lerp(op.position.clone().add(new THREE.Vector3(-1, 0, -1).applyAxisAngle(new THREE.Vector3(0,1,0), op.rotation.y)), 0.1); op.dog.lookAt(op.position); } else { op.dog.visible=false; }});
 
             powerPellets.forEach(p => { if(p.visible) { p.material.color.setHex(rainbowHex); if(p.pAura) p.pAura.material.color.setHex(rainbowHex); } });
 
-            // Boss Attacks visuals
-            if(currentMode === 'boss' && theBoss) {
+            if(currentMode === 'boss' && theBoss && !spectator) {
                 if(theBoss.attackDuration > 0) {
                     theBoss.attackDuration--;
-                    if(theBoss.currentAttack === 3) { theBoss.scale.set(6,6,6); } // Gigantism
-                    if(theBoss.currentAttack === 4) { theBoss.children[0].material.opacity = 0.2; } // Invis
+                    if(theBoss.currentAttack === 3) { theBoss.scale.set(6,6,6); } 
+                    if(theBoss.currentAttack === 4) { theBoss.children[0].material.opacity = 0.2; } 
                 } else {
                     theBoss.scale.set(4,4,4); theBoss.children[0].material.opacity = 1;
                 }
             }
 
-            if(currentMode === 'boss' && theBoss) {
+            if(currentMode === 'boss' && theBoss && !spectator) {
                 document.getElementById('bossBar').style.width = (bossHp/bossMaxHp*100) + '%';
                 let bHitDist = (theBoss.currentAttack === 3 && theBoss.attackDuration > 0) ? 5.5 : 3.5;
                 if(!powerUp && theBoss.position.distanceTo(playerGroup.position) < bHitDist && !isDying && topHalf.visible && allowMovement) killPlayer();
@@ -1250,20 +1559,25 @@
                             if(currentLevel < 100) { broadcastState('bossNextLevel', {level: currentLevel + 1}); showComboScore("BOSS DOWN! NEXT IN 3s...", playerGroup.position); setTimeout(() => { startGame(currentLevel + 1); }, 3000); } 
                             else { broadcastState('bossDead',{}); endGame("BOSS RUSH COMPLETED!", true); }
                         } 
-                    } else { hostConnection.send({type: 'bossHit'}); }
+                    } else { if(hostConnection && hostConnection.open) hostConnection.send({type: 'bossHit'}); }
                 }
             }
 
             if(isMultiplayer && allowMovement && !isDying) {
-                if(currentMode === 'coop' || currentMode === 'custom') {
-                    Object.values(otherPlayers).forEach(op => { if (playerGroup.position.distanceTo(op.position) < 2.0 && !op.isDying && op.children[0].visible) { if (op.timers && op.timers.p > powerTimeLeft) { powerUp = true; powerTimeLeft = op.timers.p; document.getElementById('powerBarContainer').style.display='block'; } } });
+                if((currentMode === 'coop' || currentMode === 'custom' || currentMode === 'arcade' || currentMode === 'comp-pvp') && !spectator) {
+                    Object.values(otherPlayers).forEach(op => { 
+                        if (currentMode === 'comp-pvp' && op.team !== myTeam) return; 
+                        if (playerGroup.position.distanceTo(op.position) < 2.0 && !op.isDying && op.children[0].visible) { 
+                            if (op.timers && op.timers.p > powerTimeLeft) { powerUp = true; powerTimeLeft = op.timers.p; document.getElementById('powerBarContainer').style.display='block'; } 
+                        } 
+                    });
                 }
-                if(currentMode.includes('pvp')) {
+                if((currentMode === 'pvp' || currentMode === 'hide' || currentMode === 'comp-pvp') && !spectator) {
                     Object.values(otherPlayers).forEach(op => {
+                        if (currentMode === 'comp-pvp' && op.team === myTeam) return; 
                         if (op.isDying || !op.children[0].visible || topHalf.visible === false) return;
                         if (playerGroup.position.distanceTo(op.position) < 1.8) {
                             const myPower = powerUp, theirPower = op.timers && op.timers.p > 0;
-                            // SOLO el jugador con pastilla puede matar al que no tiene
                             if (!myPower && theirPower) { killPlayer(); } 
                             else if (myPower && !theirPower) { addScore(500); playSfx(1500, 0.2, 'sawtooth'); showComboScore(500, op.position); }
                         }
@@ -1271,7 +1585,7 @@
                 }
                 syncTimer++;
                 if(syncTimer % 3 === 0) {
-                    broadcastState('pos', { id: myPeerId, n: playerName, lives: lives, dog: dogEquipped, x: playerGroup.position.x, y: playerGroup.position.y, z: playerGroup.position.z, ry: pacmanModel.rotation.y, color: pacColor, auraCol: targetAuraCol, auraOp: targetAuraOp, expr: myExpr, timers: { p: powerTimeLeft } });
+                    broadcastState('pos', { id: myPeerId, n: playerName, lives: lives, dog: dogEquipped, x: playerGroup.position.x, y: playerGroup.position.y, z: playerGroup.position.z, ry: pacmanModel.rotation.y, color: pacColor, auraCol: targetAuraCol, auraOp: targetAuraOp, expr: myExpr, timers: { p: powerTimeLeft }, v: topHalf.visible, team: myTeam });
                     if(isHost) {
                         const gData = ghosts.map(g => ({ x: g.position.x, y: g.position.y, z: g.position.z, tx: playerGroup.position.x, tz: playerGroup.position.z, isDead: g.isDead })); broadcastState('ghostSync', gData);
                         if(theBoss) broadcastState('bossSync', { x: theBoss.position.x, y: theBoss.position.y, z: theBoss.position.z, tx: playerGroup.position.x, tz: playerGroup.position.z });
@@ -1279,40 +1593,46 @@
                 }
             }
 
-            if(!allowMovement || isDying || !topHalf.visible) { renderer.render(scene, camera); return; }
+            if(!allowMovement || isDying || (spectator === false && !topHalf.visible)) { renderer.render(scene, camera); return; }
 
             const speedMagnitude = Math.sqrt(moveF*moveF + moveS*moveS);
             if(speedMagnitude > 0) {
+                if(currentMode === 'tutorial' && tutorialStep === 0) {
+                    tutorialDistance += speedMagnitude;
+                    if(tutorialDistance > 30) { tutorialStep++; document.getElementById('tutorial-overlay').innerText = "TAP 'JUMP' BUTTON TO JUMP"; }
+                }
                 const mouthAngle = Math.abs(Math.sin(Date.now() * 0.015)) * 0.5; topHalf.rotation.x = -mouthAngle; bottomHalf.rotation.x = mouthAngle;
                 pacmanModel.rotation.y = Math.atan2(moveS, moveF); aimDir.set(moveS, 0, moveF).normalize();
             } else { topHalf.rotation.x = 0; bottomHalf.rotation.x = 0; }
 
             if(isRotL) playerGroup.rotation.y += 0.05; if(isRotR) playerGroup.rotation.y -= 0.05;
             if(isRotU) cameraPivot.rotation.x = Math.min(cameraPivot.rotation.x + 0.03, 0.5); if(isRotD) cameraPivot.rotation.x = Math.max(cameraPivot.rotation.x - 0.03, -0.2);
-            if(isJumping) { playerGroup.position.y += velocityY; velocityY -= 0.015; if(playerGroup.position.y <= 1.0) { playerGroup.position.y = 1.0; isJumping = false; } }
+            if(isJumping && !spectator) { playerGroup.position.y += velocityY; velocityY -= 0.015; if(playerGroup.position.y <= 1.0) { playerGroup.position.y = 1.0; isJumping = false; } }
 
             let currentTotalSpeed = 1 + pacSpeedBoost;
+            if(activeDebuff === 'slow') currentTotalSpeed *= 0.5;
             if(dashActive > 0) { dashActive--; currentTotalSpeed += 1.5; }
             if(dashCooldown > 0) dashCooldown--;
+            if(spectator) currentTotalSpeed = 2.0;
 
             const dir = new THREE.Vector3(moveS, 0, moveF).applyAxisAngle(new THREE.Vector3(0,1,0), playerGroup.rotation.y);
             dir.multiplyScalar(currentTotalSpeed); 
             
-            const npX = playerGroup.position.clone(); npX.x += dir.x; if(!checkCol(npX, true)) playerGroup.position.x = npX.x;
-            const npZ = playerGroup.position.clone(); npZ.z += dir.z; if(!checkCol(npZ, true)) playerGroup.position.z = npZ.z;
+            const npX = playerGroup.position.clone(); npX.x += dir.x; if(spectator || !checkCol(npX, true)) playerGroup.position.x = npX.x;
+            const npZ = playerGroup.position.clone(); npZ.z += dir.z; if(spectator || !checkCol(npZ, true)) playerGroup.position.z = npZ.z;
 
-            const warpLimit = 29;
+            let warpLimit = (currentMode === 'hide') ? 61 : 29;
             if(playerGroup.position.x > warpLimit) playerGroup.position.x = -warpLimit + 1; else if(playerGroup.position.x < -warpLimit) playerGroup.position.x = warpLimit - 1;
             if(playerGroup.position.z > warpLimit) playerGroup.position.z = -warpLimit + 1; else if(playerGroup.position.z < -warpLimit) playerGroup.position.z = warpLimit - 1;
 
-            if(powerUp) {
+            if(powerUp && currentMode !== 'hide') {
                 powerTimeLeft -= 16; document.getElementById('powerBar').style.width = (powerTimeLeft/7000*100)+'%';
                 const isBlinking = powerTimeLeft < 2000 && Math.floor(Date.now()/200)%2===0;
-                ghosts.forEach(g => { if(!g.isDead) g.children[0].material.color.set(isBlinking ? 0xffffff : 0x0000ff); });
-                if(powerTimeLeft <= 0) { powerUp = false; ghostKillCombo = 0; document.getElementById('powerBarContainer').style.display='none'; ghosts.forEach(g => { if(!g.isDead) g.children[0].material.color.set(g.baseColor); g.scale.set(1,1,1); }); }
+                ghosts.forEach(g => { if(!g.isDead && !g.isSabotage) g.children[0].material.color.set(isBlinking ? 0xffffff : 0x0000ff); });
+                if(powerTimeLeft <= 0) { powerUp = false; ghostKillCombo = 0; document.getElementById('powerBarContainer').style.display='none'; ghosts.forEach(g => { if(!g.isDead && !g.isSabotage) g.children[0].material.color.set(g.baseColor); g.scale.set(1,1,1); }); }
             }
 
-            if((isHost || !isMultiplayer) && currentMode !== 'house') {
+            if((isHost || !isMultiplayer) && currentMode !== 'house' && !spectator) {
                 const baseGSpeed = 0.025 + (currentLevel * 0.0015);
                 const isScatterMode = (Date.now() % 20000) < 5000; 
 
@@ -1321,18 +1641,18 @@
                     else {
                         theBoss.attackTimer--;
                         if(theBoss.attackTimer <= 0) {
-                            theBoss.attackTimer = 300 + Math.random() * 100; // ~5-6s
+                            theBoss.attackTimer = 300 + Math.random() * 100; 
                             let atk = Math.floor(Math.random() * 8);
                             theBoss.currentAttack = atk; theBoss.attackDuration = 180;
                             
-                            if(atk === 1) bossHp = Math.min(bossMaxHp, bossHp + 5); // Heal
-                            if(atk === 2) { // Teleport
+                            if(atk === 1) bossHp = Math.min(bossMaxHp, bossHp + 5); 
+                            if(atk === 2) { 
                                 let targets = [playerGroup, ...Object.values(otherPlayers).filter(op=>op.children[0].visible)];
                                 let t = targets[Math.floor(Math.random()*targets.length)];
                                 if(t) { theBoss.position.set(t.position.x + (Math.random()*4-2), 0, t.position.z + (Math.random()*4-2)); }
                             }
-                            if(atk === 5) { createBarkRing(theBoss.position); } // Blast ring (visual)
-                            if(atk === 7) { // Clone spawn
+                            if(atk === 5) { createBarkRing(theBoss.position); } 
+                            if(atk === 7) { 
                                 let g = createGhost({ai:'chase', color: bossColors[(currentLevel-1)%3], cornerX: 0, cornerZ: 0});
                                 g.isClone = true; g.position.copy(theBoss.position); mapGroup.add(g); ghosts.push(g);
                             }
@@ -1343,8 +1663,8 @@
                         let target = playerGroup; let minDistance = 9999;
                         [playerGroup, ...Object.values(otherPlayers).map(op=>op.children[0].visible?op:null)].filter(x=>x).forEach(p => { let d = p.position.distanceTo(theBoss.position); if(d<minDistance){minDistance=d; target=p;} });
                         let dx = target.position.x - theBoss.position.x, dz = target.position.z - theBoss.position.z; let dist = Math.sqrt(dx*dx + dz*dz) || 1;
-                        let bSpeed = (theBoss.currentAttack === 0 && theBoss.attackDuration > 0) ? 0.06 : 0.02; // Dash boost
-                        let phaseWall = (theBoss.currentAttack === 6 && theBoss.attackDuration > 0); // Ghost form
+                        let bSpeed = (theBoss.currentAttack === 0 && theBoss.attackDuration > 0) ? 0.06 : 0.02; 
+                        let phaseWall = (theBoss.currentAttack === 6 && theBoss.attackDuration > 0); 
                         
                         const nX = theBoss.position.clone(); nX.x += (dx/dist)*bSpeed; if(phaseWall || !checkCol(nX, false)) theBoss.position.x = nX.x;
                         const nZ = theBoss.position.clone(); nZ.z += (dz/dist)*bSpeed; if(phaseWall || !checkCol(nZ, false)) theBoss.position.z = nZ.z;
@@ -1358,7 +1678,7 @@
                     let targetX = playerGroup.position.x, targetZ = playerGroup.position.z;
                     if(g.isDead) {
                         if(g.isClone) {
-                            g.position.set(9999, -9999, 9999); // Eliminado para siempre, no revive
+                            g.position.set(9999, -9999, 9999); 
                             return;
                         }
                         targetX = -2; targetZ = -2; let dx = targetX - g.position.x, dz = targetZ - g.position.z; let dist = Math.sqrt(dx*dx + dz*dz) || 1;
@@ -1367,11 +1687,15 @@
                     }
                     let minDistance = playerGroup.position.distanceTo(g.position);
                     if(isMultiplayer) { Object.values(otherPlayers).forEach(op => { if(op.children[0].visible && !op.isDying) { let d = op.position.distanceTo(g.position); if(d < minDistance) minDistance = d; } }); }
-                    let isEnraged = minDistance < 5 && !powerUp;
-                    if (!powerUp) { if (isEnraged) { g.scale.set(1.15, 1.15, 1.15); g.children[0].material.color.setHex(new THREE.Color(g.baseColor).lerp(new THREE.Color(0xff0000), 0.5).getHex()); } else { g.scale.set(1, 1, 1); g.children[0].material.color.setHex(g.baseColor); } } else { g.scale.set(1,1,1); }
-                    if (powerUp) { targetX = g.cornerX * -1; targetZ = g.cornerZ * -1; } else if (isScatterMode) { targetX = g.cornerX; targetZ = g.cornerZ; } 
+                    
+                    let isEnraged = minDistance < 5 && !powerUp && !g.isSabotage;
+                    
+                    if (!powerUp && !g.isSabotage) { if (isEnraged) { g.scale.set(1.15, 1.15, 1.15); g.children[0].material.color.setHex(new THREE.Color(g.baseColor).lerp(new THREE.Color(0xff0000), 0.5).getHex()); } else { g.scale.set(1, 1, 1); g.children[0].material.color.setHex(g.baseColor); } } 
+                    else { g.scale.set(1,1,1); }
+                    
+                    if (powerUp && !g.isSabotage) { targetX = g.cornerX * -1; targetZ = g.cornerZ * -1; } else if (isScatterMode && !g.isSabotage) { targetX = g.cornerX; targetZ = g.cornerZ; } 
                     else { if (g.aiType === 'ambush') { const lookDir = aimDir.clone(); targetX += lookDir.x * 8; targetZ += lookDir.z * 8; } else if (g.aiType === 'wander') { if (playerGroup.position.distanceTo(g.position) < 8) { targetX = g.cornerX; targetZ = g.cornerZ; } } else if (g.aiType === 'flank') { const lookDir = aimDir.clone().negate(); targetX += lookDir.x * 5; targetZ += lookDir.z * 5; } }
-                    const gSpeed = powerUp ? 0.01 : (baseGSpeed * (isEnraged ? 1.4 : 1));
+                    const gSpeed = powerUp && !g.isSabotage ? 0.01 : (baseGSpeed * (isEnraged ? 1.4 : 1));
                     let dx = targetX - g.position.x, dz = targetZ - g.position.z; let dist = Math.sqrt(dx*dx + dz*dz) || 1;
                     const ngX = g.position.clone(); ngX.x += (dx/dist) * gSpeed; if(!checkCol(ngX, false)) g.position.x = ngX.x;
                     const ngZ = g.position.clone(); ngZ.z += (dz/dist) * gSpeed; if(!checkCol(ngZ, false)) g.position.z = ngZ.z;
@@ -1379,23 +1703,35 @@
                 });
             }
 
-            ghosts.forEach((g) => { if(g.isDead) return; if(playerGroup.position.distanceTo(g.position) < 1.5) { if(powerUp) killGhost(g); else if(!isJumping && !isDying && topHalf.visible && allowMovement) killPlayer(); } });
-            dots.forEach(d => { if(d.visible && playerGroup.position.distanceTo(d.position) < 1.8) processDotConsumption(d, true); });
+            if (!spectator) {
+                ghosts.forEach((g) => { 
+                    if(g.isDead) return; 
+                    if(playerGroup.position.distanceTo(g.position) < 1.5) { 
+                        if(g.isSabotage) {
+                            applyDebuff();
+                            g.position.set((Math.random()-0.5)*10, 0, (Math.random()-0.5)*10); 
+                        }
+                        else if(powerUp) killGhost(g); 
+                        else if(!isJumping && !isDying && topHalf.visible && allowMovement) killPlayer(); 
+                    } 
+                });
+                dots.forEach(d => { if(d.visible && playerGroup.position.distanceTo(d.position) < 1.8) processDotConsumption(d, true); });
 
-            if (activeFruit && playerGroup.position.distanceTo(activeFruit.position) < 2.0) {
-                addScore(activeFruit.fruitValue); playSfx(900, 0.4, 'sine'); happyTimer = 60; mapGroup.remove(activeFruit); activeFruit = null; document.getElementById('fruit-indicator').style.display = 'none';
+                if (activeFruit && playerGroup.position.distanceTo(activeFruit.position) < 2.0) {
+                    addScore(activeFruit.fruitValue); playSfx(900, 0.4, 'sine'); happyTimer = 60; mapGroup.remove(activeFruit); activeFruit = null; document.getElementById('fruit-indicator').style.display = 'none';
+                }
             }
 
-            // Cámara en 1ra persona: Corrección de ángulo (Math.PI restado)
             if(isFirstPerson) {
                 cameraPivot.rotation.y = pacmanModel.rotation.y - Math.PI; 
                 cameraPivot.position.copy(pacmanModel.position);
                 camera.position.set(0, 0.5, 0);
                 camera.rotation.set(0, 0, 0); 
-                pacmanModel.scale.set(0.001, 0.001, 0.001); // Ocultar para no tapar cámara
+                pacmanModel.scale.set(0.001, 0.001, 0.001); 
             }
 
-            miniCtx.fillStyle = '#000'; miniCtx.fillRect(0,0,120,120); const scale = 2.0, off = 60; 
+            miniCtx.fillStyle = '#000'; miniCtx.fillRect(0,0,120,120); 
+            const scale = (currentMode === 'hide') ? 1.0 : 2.0, off = 60; 
             miniCtx.fillStyle = (customSettings && customSettings.wc) ? customSettings.wc : '#0033ff'; walls.forEach(w => miniCtx.fillRect(w.min.x*scale+off, w.min.z*scale+off, (w.max.x-w.min.x)*scale, (w.max.z-w.min.z)*scale));
             miniCtx.fillStyle = 'rgba(255, 0, 0, 0.3)'; ghostWalls.forEach(w => miniCtx.fillRect(w.min.x*scale+off, w.min.z*scale+off, (w.max.x-w.min.x)*scale, (w.max.z-w.min.z)*scale));
             dots.forEach(d => { if(d.visible) { if (d.pType === 2) miniCtx.fillStyle = '#' + rainbowHex.toString(16).padStart(6, '0'); else miniCtx.fillStyle = '#' + d.material.color.getHexString(); let dS = d.pType === 0 ? 1.5 : 3; miniCtx.fillRect(d.position.x*scale+off - dS/2, d.position.z*scale+off - dS/2, dS, dS); } });
@@ -1415,8 +1751,19 @@
                 miniCtx.stroke();
             }
             
-            Object.keys(otherPlayers).forEach(k => { const op = otherPlayers[k]; if(op.children[0].visible) { miniCtx.fillStyle = '#' + op.children[0].material.color.getHexString(); miniCtx.fillRect(op.position.x*scale+off-2, op.position.z*scale+off-2, 4, 4); } });
-            ghosts.forEach(g => { if(!g.isDead) { miniCtx.fillStyle = powerUp ? '#0000ff' : '#' + g.baseColor.toString(16).padStart(6, '0'); miniCtx.fillRect(g.position.x*scale+off - 2, g.position.z*scale+off - 2, 4, 4); } });
+            Object.keys(otherPlayers).forEach(k => { 
+                const op = otherPlayers[k]; 
+                if(op.children[0].visible) { 
+                    if (currentMode === 'hide' && isSeeker) return; 
+                    miniCtx.fillStyle = '#' + op.children[0].material.color.getHexString(); miniCtx.fillRect(op.position.x*scale+off-2, op.position.z*scale+off-2, 4, 4); 
+                } 
+            });
+            ghosts.forEach(g => { 
+                if(!g.isDead) { 
+                    miniCtx.fillStyle = g.isSabotage ? '#32cd32' : (powerUp ? '#0000ff' : '#' + g.baseColor.toString(16).padStart(6, '0')); 
+                    miniCtx.fillRect(g.position.x*scale+off - 2, g.position.z*scale+off - 2, 4, 4); 
+                } 
+            });
             if(theBoss) { miniCtx.fillStyle = '#' + bossColors[(currentLevel-1)%3].toString(16).padStart(6,'0'); miniCtx.fillRect(theBoss.position.x*scale+off - 4, theBoss.position.z*scale+off - 4, 8, 8); }
 
             renderer.render(scene, camera);
