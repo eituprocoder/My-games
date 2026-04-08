@@ -1,869 +1,821 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tetris Showdown - V2</title>
+    <title>Tetris Showdown</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root {
-            --neon-green: #0DFF72;
-            --neon-blue: #0DC2FF;
-            --neon-pink: #FF0D72;
-            --neon-yellow: #FFE138;
-            --neon-purple: #F538FF;
-            --dark-bg: #1a1a22;
-            --panel-bg: #2a2a35;
-        }
-
         body {
-            background: var(--dark-bg);
-            color: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            height: 100vh; margin: 0; overflow: hidden;
-            transition: background 0.3s ease;
+            background: #1e1e24; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            min-height: 100vh; margin: 0; overflow-x: hidden;
         }
-
-        /* --- ESTILOS FUTURISTAS Y ANIMACIONES --- */
-        .neon-box {
-            box-shadow: 0 0 10px rgba(13, 194, 255, 0.2), inset 0 0 10px rgba(13, 194, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-        .neon-box:hover {
-            box-shadow: 0 0 20px rgba(13, 194, 255, 0.5), inset 0 0 15px rgba(13, 194, 255, 0.2);
-        }
-
-        #menu-container {
-            background: var(--panel-bg); padding: 20px; border-radius: 15px;
-            box-shadow: 0 0 30px rgba(0,0,0,0.8), 0 0 15px var(--neon-blue); text-align: center;
-            width: 90%; max-width: 450px; z-index: 10;
-            max-height: 95vh; overflow-y: auto;
-            position: relative;
-        }
-        #menu-container h1 { margin-top: 0; color: var(--neon-green); font-size: 32px; text-transform: uppercase; font-style: italic; text-shadow: 0 0 10px var(--neon-green);}
+        h1, h2, h3 { margin: 10px 0; text-align: center; }
+        .screen { display: none; width: 100%; max-width: 1000px; padding: 20px; box-sizing: border-box; }
+        .active { display: flex; flex-direction: column; align-items: center; }
         
-        .top-bar { display: flex; justify-content: space-between; margin-bottom: 10px; }
-        .lang-btn, .shop-btn, .tut-btn {
-            background: #111; color: #fff; border: 1px solid #555; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;
-            transition: 0.2s;
-        }
-        .lang-btn:hover { border-color: var(--neon-blue); color: var(--neon-blue); }
-        .shop-btn:hover { border-color: var(--neon-yellow); color: var(--neon-yellow); }
-        .tut-btn:hover { border-color: var(--neon-green); color: var(--neon-green); }
-
-        .profile-section { background: #111; padding: 10px; border-radius: 8px; border: 1px solid var(--neon-yellow); margin-bottom: 15px; display: flex; justify-content: space-around; flex-wrap: wrap;}
-        .profile-section p { margin: 5px; font-weight: bold; color: var(--neon-yellow); font-size: 14px;}
-        .event-text { color: var(--neon-pink) !important; }
-        .coin-text { color: #0DC2FF !important; }
-
-        input {
-            width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #555;
-            background: #111; color: #fff; box-sizing: border-box; font-size: 16px; transition: border 0.3s;
-        }
-        input:focus { border-color: var(--neon-blue); outline: none; box-shadow: 0 0 10px rgba(13,194,255,0.5); }
+        /* UI Elements */
+        input[type="text"] { padding: 10px; margin: 5px; border-radius: 5px; border: none; font-size: 16px; text-align: center;}
+        button { padding: 12px 20px; margin: 5px; font-size: 16px; background: #4a4e69; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #22223b; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        .menu-box { background: #2b2d42; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px; width: 100%; max-width: 400px;}
         
-        button.action-btn {
-            width: 100%; padding: 10px; margin: 5px 0; font-size: 15px;
-            background: #3877FF; color: white; border: none; border-radius: 5px;
-            cursor: pointer; font-weight: bold; transition: 0.2s transform, 0.2s background;
-        }
-        button.action-btn:hover { transform: scale(1.02); filter: brightness(1.2); }
-        button.action-btn:active { transform: scale(0.95); }
-        button:disabled { background: #555 !important; color: #aaa !important; cursor: not-allowed !important; transform: none !important; filter: none !important;}
+        /* Game Area */
+        #game-layout { display: flex; flex-wrap: wrap; width: 100%; justify-content: center; gap: 20px; position: relative; }
+        #main-player { display: flex; flex-direction: column; align-items: center; }
+        canvas { background-color: #000; border: 2px solid #8d99ae; border-radius: 4px; box-shadow: 0 0 10px rgba(0,0,0,0.5);}
+        #tetris { height: 60vh; }
         
-        .host-info { margin-top: 10px; color: #FF8E0D; font-weight: bold; white-space: pre-wrap; word-wrap: break-word;}
-        #host-waiting-msg { color: var(--neon-pink); margin-top: 10px; font-weight: bold; font-size: 14px; display: none; }
-
-        /* --- SALAS VISUALES --- */
-        .visual-rooms-container { background: #111; padding: 10px; border-radius: 8px; border: 1px solid var(--neon-blue); margin: 15px 0; }
-        .visual-rooms-container h4 { margin: 0 0 10px 0; color: var(--neon-blue); }
-        .visual-grid { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-        .visual-grid button { width: 30%; background: #2a5ac2; padding: 10px 0;}
-
-        /* --- TABLA DE CLASIFICACIÓN --- */
-        #leaderboard-section {
-            margin-top: 15px; background: var(--dark-bg); border-radius: 8px; padding: 10px; border: 1px solid #444;
-            max-height: 150px; overflow-y: auto; display: none;
-        }
-        #leaderboard-section h4 { margin: 0 0 10px 0; color: var(--neon-blue); }
-        .leaderboard-item { display: flex; justify-content: space-between; font-size: 14px; border-bottom: 1px solid #333; padding: 3px 0;}
-        .leaderboard-item span.gold { color: var(--neon-yellow); font-weight: bold; }
-
-        /* --- PANTALLA DE JUEGO --- */
-        #game-wrapper {
-            display: none; width: 100%; height: 100vh;
-            flex-direction: row; padding: 10px; box-sizing: border-box; gap: 10px;
-        }
-        #local-player-section { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; }
+        /* Opponents */
+        #opponents-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 600px; }
+        .opponent { display: flex; flex-direction: column; align-items: center; background: #2b2d42; padding: 10px; border-radius: 8px; }
+        .opponent canvas { height: 200px; border: 1px solid #555; }
+        .opponent-name { font-size: 14px; margin-bottom: 5px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 100px; text-align: center; }
+        .target-btn { font-size: 12px; padding: 5px 10px; margin-top: 5px; background: #c1121f; }
+        .target-btn.selected { background: #780000; border: 2px solid #fdf0d5; font-weight: bold; }
         
-        #game-info {
-            text-align: center; margin-bottom: 5px; font-size: 16px; color: var(--neon-yellow); font-weight: bold;
-            background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 5px; text-transform: uppercase; border: 1px solid var(--neon-yellow);
-        }
-
-        #canvas-container { position: relative; box-shadow: 0 0 20px var(--neon-blue); border-radius: 4px; }
-        #tetris { border: 4px solid #fff; background-color: #000; height: 60vh; max-height: 500px; border-radius: 4px; }
-
-        .controls {
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; width: 100%; max-width: 320px;
-        }
-        .controls button {
-            padding: 10px; font-size: 16px; background: #333; color: white;
-            border: 2px solid #555; border-radius: 8px; touch-action: manipulation; transition: 0.1s;
-        }
-        .controls button:active { background: #555; transform: scale(0.9); }
-        .btn-super { background: var(--neon-purple) !important; color: #000 !important; font-weight: bold; grid-column: span 2; border-color: #fff !important;}
-        .btn-harddrop { background: var(--neon-pink) !important; color: #fff; font-weight: bold;}
-
-        /* --- OPONENTES Y CHAT --- */
-        #right-panel { flex: 1; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+        /* Controls */
+        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; width: 90%; max-width: 300px; }
+        .controls button { padding: 15px; font-size: 20px; touch-action: manipulation; }
+        .attack-btn { background: #e63946 !important; font-weight: bold; }
+        .attack-btn:active { background: #a8202a !important; }
         
-        #opponents-section {
-            flex: 2; background: rgba(255,255,255,0.05); border-radius: 10px; padding: 10px; 
-            display: flex; flex-direction: column; overflow: hidden; border: 1px solid #444;
-        }
-        #opponents-section h3 { margin-top: 0; text-align: center; color: var(--neon-green); border-bottom: 1px solid #444; padding-bottom: 5px; font-size: 14px;}
-        #opponents-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; overflow-y: auto; padding-right: 5px; }
-
-        .opponent-container {
-            background: var(--panel-bg); border-radius: 8px; padding: 5px; text-align: center; border: 2px solid #444; position: relative; display: flex; flex-direction: column; align-items: center;
-        }
-        .opponent-name { font-size: 11px; font-weight: bold; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
-        .opponent-score { font-size: 10px; color: var(--neon-yellow); margin-bottom: 2px;}
-        .opponent-canvas { background: #000; border: 1px solid #999; width: 60px; height: 100px; }
-
-        .opponent-container.dead { border-color: var(--neon-pink); opacity: 0.5; }
-        .opponent-container.dead .opponent-name { color: var(--neon-pink); }
-        .death-overlay {
-            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 13, 114, 0.4); color: white; font-size: 24px;
-            align-items: center; justify-content: center; border-radius: 8px; text-shadow: 0 0 5px #000;
-        }
-        .opponent-container.dead .death-overlay { display: flex; }
-
-        /* --- CHAT SECTION --- */
-        #chat-section {
-            flex: 1; background: #111; border: 1px solid var(--neon-blue); border-radius: 10px; display: none; flex-direction: column; padding: 5px;
-        }
-        #chat-messages { flex: 1; overflow-y: auto; font-size: 12px; margin-bottom: 5px; padding: 5px; background: #000; border-radius: 5px; }
-        .chat-msg { margin-bottom: 3px; word-wrap: break-word; }
-        .chat-sender { color: var(--neon-green); font-weight: bold; }
-        #chat-input-container { display: flex; gap: 5px; }
-        #chat-input { margin: 0; padding: 5px; font-size: 12px; flex: 1; }
-        #chat-send-btn { padding: 5px 10px; font-size: 12px; background: var(--neon-blue); color: #000; border: none; border-radius: 3px; font-weight: bold; cursor: pointer;}
-
-        /* --- MODALES (Tienda, Tutorial) --- */
-        .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center;
-        }
-        .modal-content {
-            background: var(--panel-bg); padding: 20px; border-radius: 15px; border: 2px solid var(--neon-blue);
-            width: 80%; max-width: 400px; text-align: center; box-shadow: 0 0 30px rgba(13,194,255,0.4);
-        }
-        .close-btn { background: var(--neon-pink); color: #fff; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer; margin-top: 15px; font-weight: bold;}
-
-        /* --- PANTALLA DE VICTORIA --- */
-        #winner-screen {
-            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.95); padding: 40px; border-radius: 15px; border: 3px solid var(--neon-green);
-            text-align: center; z-index: 100; box-shadow: 0 0 40px rgba(13,255,114,0.4); min-width: 300px;
-        }
+        /* Info */
+        .stats { margin-top: 10px; font-size: 16px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center;}
+        .trophy { color: gold; }
+        .charge-text { color: #0DFF72; font-weight: bold; }
         
-        .team-red { color: #FF4444; }
-        .team-blue { color: #4444FF; }
-        .revive-timer { font-size: 10px; color: var(--neon-green); display: block; }
+        /* Overlays */
+        #room-id-display { font-size: 24px; font-weight: bold; color: #e63946; user-select: all; margin: 10px 0;}
+        #qr-code { background: white; padding: 10px; border-radius: 8px; margin: 10px auto; display: none; }
+        .player-list { list-style: none; padding: 0; width: 100%; max-width: 300px;}
+        .player-list li { background: #4a4e69; margin: 5px 0; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between;}
+        #sudden-death-msg { position: absolute; top: 30%; color: #e63946; font-size: 32px; font-weight: bold; text-shadow: 0 0 10px #000; display: none; z-index: 10; pointer-events: none;}
     </style>
 </head>
 <body>
 
-    <div id="tutorial-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h2 id="txt-tut-title" style="color:var(--neon-green)">TUTORIAL</h2>
-            <p id="txt-tut-1" style="font-size: 14px; text-align: left;">🎮 <b>Controles:</b> Usa los botones para mover, rotar y soltar piezas.<br><br>⚡ <b>Hard Drop (⤓):</b> Deja caer la pieza al instante.<br><br>⏱️ <b>Habilidad Super:</b> Ralentiza el tiempo (0.75x) durante 3 segundos. ¡Úsala con sabiduría!<br><br>📈 <b>Dificultad:</b> ¡Cuidado! Cada 60 puntos la velocidad aumenta automáticamente en todos los modos.</p>
-            <button class="close-btn" onclick="document.getElementById('tutorial-modal').style.display='none'">X</button>
-        </div>
-    </div>
-
-    <div id="shop-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h2 id="txt-shop-title" style="color:var(--neon-yellow)">TIENDA DE MEJORAS</h2>
-            <p style="color: var(--neon-blue);">Tus Monedas: <span id="shop-coins">0</span> 🪙</p>
-            <div style="background: #111; padding: 10px; border-radius: 8px; border: 1px solid #555; margin-bottom: 10px;">
-                <h4 style="margin:0 0 5px 0; color:var(--neon-purple)">Habilidad Super (Cargas)</h4>
-                <p style="font-size:12px; margin:0 0 10px 0;">Aumenta las veces que puedes usar tu habilidad por partida.</p>
-                <p>Cargas actuales: <span id="shop-super-uses">3</span></p>
-                <button class="action-btn" id="btn-buy-super" style="background:var(--neon-green); color:#000;" onclick="buySuperUpgrade()">Mejorar (Cuesta 50 🪙)</button>
-            </div>
-            <button class="close-btn" onclick="document.getElementById('shop-modal').style.display='none'">X</button>
-        </div>
-    </div>
-
-    <div id="menu-container" class="neon-box">
-        <div class="top-bar">
-            <button class="lang-btn" onclick="toggleLanguage()">🌐 <span id="lang-text">ES</span></button>
-            <button class="tut-btn" onclick="document.getElementById('tutorial-modal').style.display='flex'" id="txt-btn-tut">📖 Tutorial</button>
-            <button class="shop-btn" onclick="openShop()" id="txt-btn-shop">🛒 Tienda</button>
-        </div>
-        
+    <div id="screen-menu" class="screen active">
         <h1>Tetris Showdown</h1>
-        
-        <div class="profile-section">
-            <p><span id="txt-trophies">Trofeos</span>: <span id="my-trophies-display">0</span> 🏆</p>
-            <p class="event-text"><span id="txt-tickets">Tickets</span>: <span id="event-tickets-display">3</span>/3 🎟️</p>
-            <p class="coin-text"><span id="txt-coins">Monedas</span>: <span id="my-coins-display">0</span> 🪙</p>
+        <div class="menu-box">
+            <h3>Player Info</h3>
+            <input type="text" id="player-name" placeholder="Enter your Name" maxlength="12">
+            <div class="stats"><span class="trophy">🏆 Trophies: <span id="menu-trophies">0</span></span></div>
         </div>
 
-        <input type="text" id="username" placeholder="Tu Nombre de Usuario" maxlength="12">
-        <hr style="border-color: #555;">
-
-        <div class="visual-rooms-container">
-            <h4 id="txt-public-rooms">🌐 Salas Públicas</h4>
-            <div class="visual-grid">
-                <button class="action-btn" onclick="joinOrHostVisual('SALA-GLOBAL-1')">SALA 1</button>
-                <button class="action-btn" onclick="joinOrHostVisual('SALA-GLOBAL-2')">SALA 2</button>
-                <button class="action-btn" onclick="joinOrHostVisual('SALA-GLOBAL-3')">SALA 3</button>
-            </div>
-            <div id="visual-status" style="margin-top: 8px; color: var(--neon-green); font-size: 13px; font-weight: bold;"></div>
+        <div class="menu-box">
+            <h3>Music Selection (Host Stream)</h3>
+            <label>Upload File (Required for music)</label>
+            <input type="file" id="audio-file" accept="audio/*" style="margin-top:10px;">
         </div>
 
-        <hr style="border-color: #555;">
-        
-        <h3 id="txt-create-room">Crear Sala Privada</h3>
-        <label style="font-size: 12px; color: var(--neon-blue); display: block; margin-bottom: 5px;">
-            <input type="checkbox" id="host-chat-enable"> <span id="txt-enable-chat">Habilitar Chat de Partida</span>
-        </label>
-        <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
-            <button class="action-btn" style="background:var(--neon-green); color:#000; width:48%;" onclick="hostRoom('classic')" id="btn-classic">Clásico<br><small>(Máx 100)</small></button>
-            <button class="action-btn" style="background:var(--neon-yellow); color:#000; width:48%;" onclick="hostRoom('tournament')" id="btn-tourney">Torneo 🏆<br><small>(Máx 850)</small></button>
-            <button class="action-btn" style="background:#4444FF; color:#fff; width:48%;" onclick="hostRoom('team')" id="btn-team">Equipos 👥<br><small>(4 a 40 jug.)</small></button>
-            <button class="action-btn" style="background:var(--neon-pink); color:#fff; width:48%;" onclick="hostRoom('event')" id="btn-event">Evento 🎟️<br><small>(Usa 1 Ticket)</small></button>
+        <div class="menu-box">
+            <h3>Multiplayer</h3>
+            <button id="btn-create" onclick="createRoom()">Create Room (Host)</button>
+            <hr style="border: 1px solid #444; margin: 15px 0;">
+            <input type="text" id="room-id-input" placeholder="Enter Room ID">
+            <button id="btn-join" onclick="joinRoom()">Join Room</button>
+            <p id="menu-status"></p>
         </div>
-        
-        <div id="room-id-display" class="host-info"></div>
-        <div id="host-waiting-msg">Esperando jugadores...</div>
-        <button class="action-btn" id="start-game-btn" style="display:none; background:var(--neon-purple); color:#fff; margin-top:10px; box-shadow: 0 0 10px var(--neon-purple);" onclick="startGameHost()" id="txt-start-btn">▶ ¡Iniciar Ronda!</button>
-
-        <div id="leaderboard-section">
-            <h4 id="txt-room-board">🏆 Tabla de la Sala</h4>
-            <div id="leaderboard-list"></div>
-        </div>
-
-        <hr style="border-color: #555; margin-top: 15px;">
-        
-        <h3 id="txt-join-room">Unirse a Sala Privada</h3>
-        <input type="text" id="join-id" placeholder="Ingresa la ID del Host">
-        <button id="btn-unirse-sala" class="action-btn" style="background:var(--neon-blue);" onclick="joinRoom()">Conectarse</button>
-        <div id="join-status" class="host-info"></div>
     </div>
 
-    <div id="game-wrapper">
-        <div id="local-player-section">
-            <div id="game-info"><span id="txt-mode-game">Modo</span>: <span id="mode-display-game">Clásico</span></div>
-            <div id="canvas-container">
-                <canvas id="tetris" width="240" height="400"></canvas>
-            </div>
-            <div class="controls">
-                <button onclick="playerRotate(-1)">↺</button>
-                <button class="btn-harddrop" onclick="playerHardDrop()">⤓</button>
-                <button onclick="playerRotate(1)">↻</button>
-                <button onclick="playerMove(-1)">←</button>
-                <button onclick="playerDrop()">↓</button>
-                <button onclick="playerMove(1)">→</button>
-                <button class="btn-super" id="btn-super-ability" onclick="activateSuper()">⚡ SUPER (<span id="super-count">3</span>) ⚡</button>
-            </div>
-        </div>
+    <div id="screen-lobby" class="screen">
+        <h2>Waiting Lobby</h2>
+        <p>Room ID (Share this):</p>
+        <div id="room-id-display">Connecting...</div>
+        <div id="qr-code"></div>
         
-        <div id="right-panel">
-            <div id="opponents-section">
-                <h3><span id="txt-survivors">SUPERVIVIENTES</span> (<span id="player-count">1</span>)</h3>
-                <div id="opponents-grid"></div>
-            </div>
-            <div id="chat-section">
-                <div id="chat-messages"></div>
-                <div id="chat-input-container">
-                    <input type="text" id="chat-input" placeholder="Mensaje..." maxlength="50">
-                    <button id="chat-send-btn" onclick="sendChat()">Enviar</button>
+        <h3>Players (<span id="player-count">1</span>/10)</h3>
+        <ul class="player-list" id="lobby-players"></ul>
+        
+        <button id="btn-start" onclick="startGame()" style="display:none; background: #2a9d8f;">Start Game</button>
+        <button onclick="leaveRoom()">Leave</button>
+    </div>
+
+    <div id="screen-game" class="screen">
+        <div id="game-layout">
+            <div id="sudden-death-msg">SUDDEN DEATH!</div>
+            <div id="main-player">
+                <canvas id="tetris" width="240" height="400"></canvas>
+                <div class="stats">
+                    <div>Score: <span id="score">0</span></div>
+                    <div class="charge-text">Charge: <span id="charge">0</span></div>
+                    <div>Target: <span id="current-target-name" style="color:#e63946">None</span></div>
+                </div>
+                <div class="controls">
+                    <button onclick="playerRotate(-1)">↺</button>
+                    <button class="rotate" onclick="playerRotate(1)">↻</button>
+                    <button class="attack-btn" onclick="triggerAttack()">⚔️</button>
+                    
+                    <button onclick="playerMove(-1)">←</button>
+                    <button onclick="playerHardDrop()">⬇️</button>
+                    <button onclick="playerMove(1)">→</button>
                 </div>
             </div>
+            
+            <div id="opponents-container">
+                </div>
         </div>
     </div>
 
-    <div id="winner-screen">
-        <h1 id="winner-text" style="color: var(--neon-green); margin-top:0;">¡Ronda Terminada!</h1>
-        <p id="winner-subtext" style="font-size: 18px; color: #fff; margin-bottom: 10px;"></p>
-        <p id="winner-rewards" style="font-size: 16px; color: var(--neon-yellow); margin-bottom: 25px; font-weight:bold;"></p>
-        
-        <div id="host-controls" style="display:none;">
-            <div id="host-end-waiting-msg" style="color: #FF8E0D; margin-bottom: 10px; display: none;">Faltan jugadores.</div>
-            <button class="action-btn" id="play-again-btn" style="background: var(--neon-blue);" onclick="playAgainHost()">Siguiente Ronda</button>
+    <div id="screen-end" class="screen">
+        <h1 id="end-title">Game Over</h1>
+        <h3 id="end-subtitle"></h3>
+        <div class="menu-box">
+            <button id="btn-continue" onclick="continueToLobby()" style="display:none;">Continue (Host)</button>
+            <button onclick="leaveRoom()">Exit to Menu</button>
         </div>
-        
-        <div id="client-waiting" style="display:none; color: var(--neon-blue); margin-bottom: 15px; font-weight: bold;">
-            Esperando al Host...
-        </div>
-        
-        <button class="action-btn" style="background: var(--neon-pink); margin-top: 10px;" onclick="location.reload()" id="txt-exit-menu">Salir al Menú</button>
     </div>
 
     <script>
-        // --- SISTEMA DE IDIOMAS ---
-        let currentLang = 'es';
-        const i18n = {
-            es: {
-                trophies: "Trofeos", tickets: "Tickets", coins: "Monedas",
-                pubRooms: "🌐 Salas Públicas", createRoom: "Crear Sala Privada",
-                enableChat: "Habilitar Chat de Partida", joinRoom: "Unirse a Sala Privada",
-                mode: "Modo", survivors: "SUPERVIVIENTES", exitMenu: "Salir al Menú",
-                tutBtn: "📖 Tutorial", shopBtn: "🛒 Tienda"
-            },
-            en: {
-                trophies: "Trophies", tickets: "Tickets", coins: "Coins",
-                pubRooms: "🌐 Public Rooms", createRoom: "Create Private Room",
-                enableChat: "Enable Match Chat", joinRoom: "Join Private Room",
-                mode: "Mode", survivors: "SURVIVORS", exitMenu: "Exit to Menu",
-                tutBtn: "📖 Tutorial", shopBtn: "🛒 Shop"
-            }
-        };
-
-        function toggleLanguage() {
-            currentLang = currentLang === 'es' ? 'en' : 'es';
-            document.getElementById('lang-text').innerText = currentLang.toUpperCase();
-            document.getElementById('txt-trophies').innerText = i18n[currentLang].trophies;
-            document.getElementById('txt-tickets').innerText = i18n[currentLang].tickets;
-            document.getElementById('txt-coins').innerText = i18n[currentLang].coins;
-            document.getElementById('txt-public-rooms').innerText = i18n[currentLang].pubRooms;
-            document.getElementById('txt-create-room').innerText = i18n[currentLang].createRoom;
-            document.getElementById('txt-enable-chat').innerText = i18n[currentLang].enableChat;
-            document.getElementById('txt-join-room').innerText = i18n[currentLang].joinRoom;
-            document.getElementById('txt-mode-game').innerText = i18n[currentLang].mode;
-            document.getElementById('txt-survivors').innerText = i18n[currentLang].survivors;
-            document.getElementById('txt-exit-menu').innerText = i18n[currentLang].exitMenu;
-            document.getElementById('txt-btn-tut').innerText = i18n[currentLang].tutBtn;
-            document.getElementById('txt-btn-shop').innerText = i18n[currentLang].shopBtn;
-            
-            // Actualizar placeholders
-            document.getElementById('username').placeholder = currentLang === 'es' ? "Tu Nombre de Usuario" : "Your Username";
-            document.getElementById('join-id').placeholder = currentLang === 'es' ? "Ingresa la ID del Host" : "Enter Host ID";
-            document.getElementById('chat-input').placeholder = currentLang === 'es' ? "Mensaje..." : "Message...";
-            document.getElementById('btn-unirse-sala').innerText = currentLang === 'es' ? "Conectarse" : "Connect";
-        }
-
-        // --- SISTEMA DE AUDIO (WEB AUDIO API) ---
-        let audioCtx = null; let musicInterval = null;
-        const melodyGame = [659, 493, 523, 587, 523, 493, 440, 440, 523, 659, 587, 523, 493, 523, 587, 659, 523, 440, 440];
-        const melodyMenu = [329, 392, 440, 523, 440, 392, 329, 261, 329, 392, 440, 392]; 
-
-        function initAudio() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-        }
-
-        function playNote(freq, type = 'square') {
-            if (!audioCtx) return;
-            let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
-            osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.05, audioCtx.currentTime); 
-            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
-            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.15);
-        }
-
-        function startMusic(type) {
-            initAudio(); if (musicInterval) clearInterval(musicInterval);
-            let melody = type === 'game' ? melodyGame : melodyMenu;
-            let speed = type === 'game' ? 250 : 350; let oscType = type === 'game' ? 'square' : 'triangle'; let i = 0;
-            playNote(melody[0], oscType); i++; 
-            musicInterval = setInterval(() => { playNote(melody[i % melody.length], oscType); i++; }, speed);
-        }
-
-        document.body.addEventListener('click', () => { if (!audioCtx) { initAudio(); if (!gameActive) startMusic('menu'); } });
-
-        // --- SISTEMA DE GUARDADO (TROFEOS, EVENTO, MONEDAS, MEJORAS) ---
-        let myTrophies = parseInt(localStorage.getItem('tetrisShowdownTrophies')) || 0;
-        let myCoins = parseInt(localStorage.getItem('tetrisCoins')) || 0;
-        let maxSuperUses = parseInt(localStorage.getItem('tetrisSuperUses')) || 3;
-        document.getElementById('my-trophies-display').innerText = myTrophies;
-        document.getElementById('my-coins-display').innerText = myCoins;
-
-        let now = new Date();
-        let eventData = JSON.parse(localStorage.getItem('tetrisEventData')) || { month: now.getMonth(), tickets: 3 };
-        if (eventData.month !== now.getMonth()) { eventData.month = now.getMonth(); eventData.tickets = 3; localStorage.setItem('tetrisEventData', JSON.stringify(eventData)); }
-        document.getElementById('event-tickets-display').innerText = eventData.tickets;
-
-        function openShop() {
-            document.getElementById('shop-coins').innerText = myCoins;
-            document.getElementById('shop-super-uses').innerText = maxSuperUses;
-            document.getElementById('shop-modal').style.display = 'flex';
-        }
-
-        function buySuperUpgrade() {
-            if(myCoins >= 50) {
-                myCoins -= 50; maxSuperUses++;
-                localStorage.setItem('tetrisCoins', myCoins); localStorage.setItem('tetrisSuperUses', maxSuperUses);
-                document.getElementById('my-coins-display').innerText = myCoins;
-                document.getElementById('shop-coins').innerText = myCoins;
-                document.getElementById('shop-super-uses').innerText = maxSuperUses;
-            } else { alert(currentLang === 'es' ? "No tienes suficientes monedas." : "Not enough coins."); }
-        }
-
-        // --- VARIABLES GLOBALES RED ---
-        const ARENA_WIDTH = 12; const ARENA_HEIGHT = 20;
-        let peer = null; let connections = []; let isHost = false; let hostConnection = null; 
-        let myUsername = ""; let gameActive = false; let playersState = {}; let myPeerId = null;
-        let currentRoomMode = 'classic'; let maxPlayers = 100; let roomSettings = { chat: false };
-        let myTeam = null; // 'red' o 'blue'
+        // --- GLOBAL VARIABLES ---
+        let peer = null;
+        let connections = {}; 
+        let hostConn = null;  
+        let isHost = false;
+        let myId = '';
+        let myName = '';
+        let myTrophies = parseInt(localStorage.getItem('tetrisTrophies')) || 0;
         
-        // Variables In-Game
-        let superUsesLeft = maxSuperUses; let isSuperActive = false;
-        let reviveTimers = {}; // { peerId: timeoutId }
+        let playersData = {}; 
+        let targetId = null;
+        let gameState = 'MENU'; 
 
-        const canvas = document.getElementById('tetris'); const context = canvas.getContext('2d');
+        // Mechanics
+        let attackCharge = 0;
+        let suddenDeathTimer = null;
+
+        // Audio & Streaming
+        let customAudio = null;
+        let remoteAudioNode = null;
+        let myAudioStream = null;
+
+        // --- DOM ELEMENTS ---
+        const screens = {
+            menu: document.getElementById('screen-menu'),
+            lobby: document.getElementById('screen-lobby'),
+            game: document.getElementById('screen-game'),
+            end: document.getElementById('screen-end')
+        };
+        const statusTxt = document.getElementById('menu-status');
+        const opponentsContainer = document.getElementById('opponents-container');
+        document.getElementById('menu-trophies').innerText = myTrophies;
+
+        // --- TETRIS LOGIC ---
+        const canvas = document.getElementById('tetris');
+        const context = canvas.getContext('2d');
         context.scale(20, 20);
-        const colors = [null, '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'];
 
-        // --- RED Y CONEXIONES (PeerJS) ---
-        function checkStartRequirements() {
-            if (!isHost) return;
-            const playerCount = Object.keys(playersState).length;
-            const startBtn = document.getElementById('start-game-btn'); const waitingMsg = document.getElementById('host-waiting-msg');
-            let req = currentRoomMode === 'team' ? 4 : 2; // Min 4 for team
+        const colors = [null, '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF', '#555555']; 
+        let arena = createMatrix(12, 20);
+        let player = { pos: {x: 0, y: 0}, matrix: null, score: 0 };
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let animationId = null;
+
+        function createMatrix(w, h) {
+            const matrix = [];
+            while (h--) matrix.push(new Array(w).fill(0));
+            return matrix;
+        }
+
+        function createPiece(type) {
+            if (type === 'I') return [[0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]];
+            if (type === 'L') return [[0, 2, 0], [0, 2, 0], [0, 2, 2]];
+            if (type === 'J') return [[0, 3, 0], [0, 3, 0], [3, 3, 0]];
+            if (type === 'O') return [[4, 4], [4, 4]];
+            if (type === 'Z') return [[5, 5, 0], [0, 5, 5], [0, 0, 0]];
+            if (type === 'S') return [[0, 6, 6], [6, 6, 0], [0, 0, 0]];
+            if (type === 'T') return [[0, 7, 0], [7, 7, 7], [0, 0, 0]];
+        }
+
+        function draw() {
+            context.fillStyle = '#000';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            drawMatrix(arena, {x: 0, y: 0}, context);
+            drawMatrix(player.matrix, player.pos, context);
             
-            if (playerCount >= req) { startBtn.style.display = "block"; waitingMsg.style.display = "none"; } 
-            else { startBtn.style.display = "none"; waitingMsg.style.display = "block"; waitingMsg.innerText = `Esperando jugadores... (${playerCount}/${req} min)`; }
-
-            const playAgainBtn = document.getElementById('play-again-btn'); const endWaitingMsg = document.getElementById('host-end-waiting-msg');
-            if (playerCount >= req) { playAgainBtn.style.display = "block"; endWaitingMsg.style.display = "none"; } 
-            else { playAgainBtn.style.display = "none"; endWaitingMsg.style.display = "block"; }
+            for (let id in playersData) {
+                if (id !== myId) drawOpponent(id);
+            }
         }
 
-        function lockHostButtons() {
-            const btns = document.querySelectorAll('.action-btn');
-            btns.forEach(b => { if(b.id !== 'start-game-btn' && b.id !== 'play-again-btn') b.disabled = true; });
-        }
-
-        function getTeamColor(index) { return index % 2 === 0 ? 'red' : 'blue'; }
-
-        function joinOrHostVisual(fixedId) {
-            lockHostButtons(); myUsername = document.getElementById('username').value || "Player" + Math.floor(Math.random()*100);
-            const statusBox = document.getElementById('visual-status'); statusBox.innerText = "Buscando " + fixedId + "...";
-            peer = new Peer();
-            peer.on('open', (id) => {
-                myPeerId = id; hostConnection = peer.connect(fixedId, { reliable: true });
-                hostConnection.on('open', () => {
-                    statusBox.innerText = "¡Uniéndote..."; document.getElementById('join-status').innerText = "Conectado a Sala Pública.";
-                    hostConnection.send({ type: 'join', name: myUsername, arena: arena, trophies: myTrophies });
-                });
-                hostConnection.on('data', (data) => handleNetworkData(data, fixedId));
-                hostConnection.on('close', () => { alert("Desconectado."); location.reload(); });
-            });
-            peer.on('error', (err) => {
-                if (err.type === 'peer-unavailable') {
-                    statusBox.innerText = "Sala vacía. Creando servidor...";
-                    peer.destroy(); setTimeout(() => hostSpecificRoom(fixedId, 'classic'), 500);
-                } else { alert("Error: " + err.type); location.reload(); }
-            });
-        }
-
-        function hostSpecificRoom(customId, mode) {
-            currentRoomMode = mode; maxPlayers = 100; isHost = true;
-            roomSettings.chat = document.getElementById('host-chat-enable').checked;
-            peer = new Peer(customId); setupHostEvents("SALA PÚBLICA:\n" + customId);
-        }
-
-        function hostRoom(mode) {
-            if (mode === 'event' && eventData.tickets <= 0) { alert(currentLang==='es'?"Sin tickets.":"No tickets."); return; }
-            if (mode === 'event') { eventData.tickets--; localStorage.setItem('tetrisEventData', JSON.stringify(eventData)); document.getElementById('event-tickets-display').innerText = eventData.tickets; }
-
-            lockHostButtons(); currentRoomMode = mode; roomSettings.chat = document.getElementById('host-chat-enable').checked;
-            maxPlayers = mode === 'tournament' ? 850 : (mode === 'team' ? 40 : 100);
-            myUsername = document.getElementById('username').value || "Host"; isHost = true;
-            peer = new Peer(); setupHostEvents(null);
-        }
-
-        function setupHostEvents(customText) {
-            peer.on('open', (id) => {
-                myPeerId = id; myTeam = 'red'; // Host is red
-                playersState[id] = { name: myUsername, score: 0, dead: false, arena: createMatrix(ARENA_WIDTH, ARENA_HEIGHT), trophies: myTrophies, team: myTeam };
-                
-                let modoText = currentRoomMode === 'tournament' ? "TORNEO 🏆" : (currentRoomMode === 'event' ? "EVENTO 🎟️" : (currentRoomMode === 'team' ? "EQUIPOS 👥" : "CLÁSICO"));
-                document.getElementById('room-id-display').innerText = customText ? customText : ("CÓDIGO PRIVADO:\n" + id + "\nModo: " + modoText);
-                document.getElementById('leaderboard-section').style.display = "block";
-                checkStartRequirements(); updateLeaderboardUI();
-            });
-
-            peer.on('connection', (conn) => {
-                if (Object.keys(playersState).length >= maxPlayers) { conn.send({ type: 'error', msg: 'Full' }); setTimeout(() => conn.close(), 1000); return; }
-                connections.push(conn);
-                conn.on('data', (data) => handleNetworkData(data, conn.peer));
-                conn.on('close', () => {
-                    if(playersState[conn.peer]) {
-                        delete playersState[conn.peer]; removeOpponentCanvas(conn.peer);
-                        broadcastState(); checkStartRequirements(); updateLeaderboardUI();
-                        if(gameActive) checkWinConditions();
+        function drawMatrix(matrix, offset, ctx, scale = 1) {
+            matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        ctx.fillStyle = colors[value];
+                        ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
                     }
                 });
             });
-            peer.on('error', (err) => alert("Error: " + err.type));
         }
 
-        function joinRoom() {
-            lockHostButtons(); myUsername = document.getElementById('username').value || "Player" + Math.floor(Math.random()*100);
-            const hostId = document.getElementById('join-id').value.trim();
-            if (!hostId) { alert("Ingresa un código"); location.reload(); return; }
-            
-            document.getElementById('join-status').innerText = "Conectando...";
-            peer = new Peer();
-            peer.on('open', (id) => {
-                myPeerId = id; hostConnection = peer.connect(hostId, { reliable: true });
-                hostConnection.on('open', () => {
-                    document.getElementById('join-status').innerText = "Esperando al Host...";
-                    hostConnection.send({ type: 'join', name: myUsername, arena: arena, trophies: myTrophies });
-                });
-                hostConnection.on('data', (data) => handleNetworkData(data, hostId));
-                hostConnection.on('close', () => { alert("Desconectado."); location.reload(); });
-            });
-            peer.on('error', (err) => alert("Error: " + err.type));
-        }
-
-        function handleNetworkData(data, senderId) {
-            if (data.type === 'join') {
-                if (isHost) {
-                    let pCount = Object.keys(playersState).length;
-                    let assignedTeam = getTeamColor(pCount);
-                    playersState[senderId] = { name: data.name, score: 0, dead: false, arena: data.arena, trophies: data.trophies || 0, team: assignedTeam };
-                    broadcastState(); checkStartRequirements(); updateLeaderboardUI();
-                }
-            } else if (data.type === 'state_sync') {
-                playersState = data.state; currentRoomMode = data.mode; roomSettings = data.settings;
-                myTeam = playersState[myPeerId].team;
-                document.getElementById('leaderboard-section').style.display = "block";
-                updateOpponentsUI(); updateLeaderboardUI();
-            } else if (data.type === 'start_game') { startGameLocal();
-            } else if (data.type === 'update_player') {
-                if (playersState[senderId]) {
-                    playersState[senderId].score = data.score; playersState[senderId].dead = data.dead;
-                    if (data.arena) playersState[senderId].arena = data.arena;
-                    if (isHost) { broadcastState(); checkWinConditions(); } else { drawOpponentArena(senderId); }
-                    
-                    // Lógica de revivir (Solo Host verifica)
-                    if (isHost && currentRoomMode === 'team') checkTeamRevive(senderId);
-                }
-            } else if (data.type === 'game_over') {
-                giveRewards(data.mode);
-                showWinner(data.winnerText, data.winnerSubtext);
-            } else if (data.type === 'chat') { receiveChat(data.sender, data.msg);
-            } else if (data.type === 'revive') {
-                if (senderId === myPeerId || senderId === hostConnection?.peer) {
-                    if (playersState[myPeerId].dead) {
-                        playersState[myPeerId].dead = false; gameActive = true; arena.forEach(row => row.fill(0));
-                        playerReset(); update(); sendMyUpdate();
-                        receiveChat("SISTEMA", "¡Has sido revivido por tu equipo!");
+        function merge(arena, player) {
+            player.matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        arena[y + player.pos.y][x + player.pos.x] = value;
                     }
-                }
-            }
-        }
-
-        function broadcastState() {
-            if (!isHost) return;
-            connections.forEach(conn => conn.send({ type: 'state_sync', state: playersState, mode: currentRoomMode, settings: roomSettings }));
-            updateOpponentsUI();
-        }
-
-        function sendMyUpdate() {
-            if (!peer || !myPeerId) return;
-            const myData = { type: 'update_player', score: player.score, dead: playersState[myPeerId].dead, arena: arena, trophies: myTrophies };
-            if (isHost) { playersState[myPeerId].score = player.score; playersState[myPeerId].arena = arena; broadcastState(); checkWinConditions(); checkTeamRevive(myPeerId); } 
-            else if (hostConnection && hostConnection.open) { hostConnection.send(myData); }
-        }
-
-        function updateLeaderboardUI() {
-            const list = document.getElementById('leaderboard-list'); list.innerHTML = "";
-            let sortedPlayers = Object.values(playersState).sort((a, b) => b.trophies - a.trophies);
-            sortedPlayers.forEach((p, index) => {
-                const item = document.createElement('div'); item.className = 'leaderboard-item';
-                let teamTag = currentRoomMode === 'team' ? (p.team==='red'?' 🔴':' 🔵') : '';
-                item.innerHTML = `<span>#${index+1} ${p.name}${teamTag}</span> <span class="gold">${p.trophies} 🏆</span>`;
-                list.appendChild(item);
+                });
             });
-        }
-
-        // --- CHAT SYSTEM ---
-        function sendChat() {
-            const input = document.getElementById('chat-input'); const msg = input.value.trim();
-            if(!msg) return; input.value = '';
-            receiveChat(myUsername, msg);
-            if(isHost) connections.forEach(c => c.send({type: 'chat', sender: myUsername, msg: msg}));
-            else if(hostConnection) hostConnection.send({type: 'chat', sender: myUsername, msg: msg});
-        }
-        document.getElementById('chat-input').addEventListener('keypress', function (e) { if (e.key === 'Enter') sendChat(); });
-
-        function receiveChat(sender, msg) {
-            const box = document.getElementById('chat-messages');
-            box.innerHTML += `<div class="chat-msg"><span class="chat-sender">${sender}:</span> ${msg}</div>`;
-            box.scrollTop = box.scrollHeight;
-        }
-
-        // --- CONTROL DE RONDAS ---
-        function startGameHost() {
-            if (Object.keys(playersState).length < (currentRoomMode==='team'?4:2)) return; 
-            connections.forEach(conn => conn.send({ type: 'start_game' })); startGameLocal();
-        }
-        function playAgainHost() { document.getElementById('winner-screen').style.display = "none"; startGameHost(); }
-
-        function startGameLocal() {
-            document.getElementById('menu-container').style.display = "none"; document.getElementById('winner-screen').style.display = "none"; document.getElementById('game-wrapper').style.display = "flex";
-            
-            // Setup Chat UI
-            document.getElementById('chat-section').style.display = roomSettings.chat ? "flex" : "none";
-            document.getElementById('chat-messages').innerHTML = "";
-
-            let modoTexto = "CLÁSICO"; if(currentRoomMode === 'tournament') modoTexto = "TORNEO 🏆"; else if(currentRoomMode === 'event') modoTexto = "EVENTO 🌟"; else if(currentRoomMode === 'team') modoTexto = "EQUIPOS 👥";
-            document.getElementById('mode-display-game').innerText = modoTexto;
-            
-            superUsesLeft = maxSuperUses; document.getElementById('super-count').innerText = superUsesLeft; isSuperActive = false;
-            
-            arena.forEach(row => row.fill(0)); player.score = 0; baseDropInterval = 1000; dropInterval = 1000;
-            
-            for(let id in playersState) { playersState[id].dead = false; playersState[id].score = 0; playersState[id].arena = createMatrix(ARENA_WIDTH, ARENA_HEIGHT); }
-            playersState[myPeerId].arena = arena;
-            
-            gameActive = true; playerReset(); update(); startMusic('game'); 
-            document.getElementById('opponents-grid').innerHTML = ""; updateOpponentsUI(); sendMyUpdate();
-        }
-
-        // --- RENDERIZADO OPONENTES ---
-        function updateOpponentsUI() {
-            const aliveCount = Object.values(playersState).filter(p => !p.dead).length;
-            document.getElementById('player-count').innerText = aliveCount;
-            for (let id in playersState) { if (id === myPeerId) continue; createOpponentCanvasIfMissing(id); drawOpponentArena(id); }
-        }
-
-        function createOpponentCanvasIfMissing(id) {
-            if (document.getElementById('opp-container-' + id)) return;
-            const grid = document.getElementById('opponents-grid'); const p = playersState[id];
-            const container = document.createElement('div'); container.id = 'opp-container-' + id; container.className = 'opponent-container';
-            if(currentRoomMode === 'team') container.classList.add(p.team === 'red' ? 'team-red' : 'team-blue');
-            const nameEl = document.createElement('div'); nameEl.className = 'opponent-name'; nameEl.innerText = p.name;
-            const scoreEl = document.createElement('div'); scoreEl.className = 'opponent-score'; scoreEl.id = 'opp-score-' + id; scoreEl.innerText = "0";
-            const timerEl = document.createElement('div'); timerEl.className = 'revive-timer'; timerEl.id = 'opp-timer-' + id; timerEl.innerText = "";
-            const canvasOpp = document.createElement('canvas'); canvasOpp.id = 'opp-canvas-' + id; canvasOpp.className = 'opponent-canvas';
-            canvasOpp.width = ARENA_WIDTH * 5; canvasOpp.height = ARENA_HEIGHT * 5;
-            const deathOverlay = document.createElement('div'); deathOverlay.className = 'death-overlay'; deathOverlay.innerText = "💀";
-
-            container.appendChild(nameEl); container.appendChild(scoreEl); container.appendChild(timerEl); container.appendChild(canvasOpp); container.appendChild(deathOverlay); grid.appendChild(container);
-        }
-
-        function removeOpponentCanvas(id) { const el = document.getElementById('opp-container-' + id); if(el) el.remove(); }
-
-        function drawOpponentArena(id) {
-            const p = playersState[id]; const canvasOpp = document.getElementById('opp-canvas-' + id);
-            const container = document.getElementById('opp-container-' + id); const scoreEl = document.getElementById('opp-score-' + id);
-            if (!canvasOpp || !p || !p.arena) return;
-
-            const ctxOpp = canvasOpp.getContext('2d'); scoreEl.innerText = p.score;
-            if (p.dead) container.classList.add('dead'); else container.classList.remove('dead');
-
-            ctxOpp.fillStyle = '#000'; ctxOpp.fillRect(0, 0, canvasOpp.width, canvasOpp.height);
-            const blockSize = 5;
-            p.arena.forEach((row, y) => { row.forEach((value, x) => { if (value !== 0) { ctxOpp.fillStyle = colors[value]; ctxOpp.fillRect(x * blockSize, y * blockSize, blockSize, blockSize); } }); });
-        }
-
-        // --- SISTEMA DE REVIVIR (EQUIPOS) ---
-        function checkTeamRevive(deadPlayerId) {
-            if (!isHost || currentRoomMode !== 'team') return;
-            const p = playersState[deadPlayerId];
-            if (p.dead && !reviveTimers[deadPlayerId]) {
-                // Iniciar cuenta regresiva de 10s si hay un aliado vivo
-                const hasAliveAlly = Object.values(playersState).some(ally => ally.team === p.team && !ally.dead && ally !== p);
-                if(hasAliveAlly) {
-                    reviveTimers[deadPlayerId] = setTimeout(() => {
-                        // Después de 10s, verificar si AL MENOS UN aliado sigue vivo
-                        const stillHasAlly = Object.values(playersState).some(ally => ally.team === p.team && !ally.dead);
-                        if(stillHasAlly && playersState[deadPlayerId].dead && gameActive) {
-                            playersState[deadPlayerId].dead = false; playersState[deadPlayerId].arena = createMatrix(ARENA_WIDTH, ARENA_HEIGHT);
-                            if(deadPlayerId === myPeerId) { handleNetworkData({type:'revive'}, myPeerId); }
-                            else { const conn = connections.find(c => c.peer === deadPlayerId); if(conn) conn.send({type:'revive'}); }
-                            broadcastState();
-                        }
-                        delete reviveTimers[deadPlayerId];
-                    }, 10000);
-                }
-            }
-        }
-
-        // --- LÓGICA DE SHOWDOWN (VICTORIA) ---
-        function checkWinConditions() {
-            if (!isHost || !gameActive) return;
-
-            if (currentRoomMode === 'team') {
-                let redAlive = Object.values(playersState).some(p => p.team === 'red' && !p.dead);
-                let blueAlive = Object.values(playersState).some(p => p.team === 'blue' && !p.dead);
-                if(redAlive && !blueAlive) endGameForAll("¡EQUIPO ROJO GANA!", "Dominación total.");
-                else if(!redAlive && blueAlive) endGameForAll("¡EQUIPO AZUL GANA!", "Dominación total.");
-                else if(!redAlive && !blueAlive) endGameForAll("EMPATE", "Todos cayeron.");
-            } else {
-                let aliveIds = Object.keys(playersState).filter(id => !playersState[id].dead);
-                let allIds = Object.keys(playersState);
-                if (allIds.length > 1) {
-                    if (aliveIds.length === 1) { let winnerId = aliveIds[0]; endGameForAll(`¡${playersState[winnerId].name} GANA!`, "Último sobreviviente.", winnerId); } 
-                    else if (aliveIds.length === 0) { endGameForAll("¡TODOS FUERON ELIMINADOS!", "Empate catastrófico.", null); }
-                }
-            }
-        }
-
-        function giveRewards(mode) {
-            let coinsGained = 0;
-            if(mode === 'classic') coinsGained = 10;
-            if(mode === 'team') coinsGained = 15;
-            if(mode === 'tournament') { coinsGained = 25; myTrophies++; localStorage.setItem('tetrisShowdownTrophies', myTrophies); }
-            if(mode === 'event') coinsGained = 50;
-
-            myCoins += coinsGained; localStorage.setItem('tetrisCoins', myCoins);
-            document.getElementById('my-trophies-display').innerText = myTrophies; document.getElementById('my-coins-display').innerText = myCoins;
-            document.getElementById('winner-rewards').innerText = `Recompensa: +${coinsGained} 🪙`;
-        }
-
-        function endGameForAll(text, subtext, winnerId = null) {
-            gameActive = false; 
-            for(let key in reviveTimers) clearTimeout(reviveTimers[key]); reviveTimers = {};
-            giveRewards(currentRoomMode);
-            showWinner(text, subtext);
-            connections.forEach(conn => { conn.send({ type: 'game_over', winnerText: text, winnerSubtext: subtext, mode: currentRoomMode }); });
-        }
-
-        function showWinner(text, subtext = "") {
-            gameActive = false; startMusic('menu'); 
-            document.getElementById('winner-screen').style.display = "block";
-            document.getElementById('winner-text').innerText = text; document.getElementById('winner-subtext').innerText = subtext;
-
-            if (isHost) { document.getElementById('host-controls').style.display = "block"; document.getElementById('client-waiting').style.display = "none"; checkStartRequirements(); updateLeaderboardUI(); } 
-            else { document.getElementById('host-controls').style.display = "none"; document.getElementById('client-waiting').style.display = "block"; }
-        }
-
-        function myPlayerDied() {
-            if (!gameActive || playersState[myPeerId].dead) return;
-            playersState[myPeerId].dead = true;
-            if(currentRoomMode !== 'team') gameActive = false; // En team sigue viendo el juego
-            context.fillStyle = 'rgba(255, 13, 114, 0.7)'; context.fillRect(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
-            context.fillStyle = '#fff'; context.font = '2px Arial'; context.fillText("FIN", 4, 10);
-            sendMyUpdate(); 
-        }
-
-        // --- HABILIDAD SUPER & VELOCIDAD PROGRESIVA ---
-        function activateSuper() {
-            if(!gameActive || isSuperActive || superUsesLeft <= 0 || playersState[myPeerId].dead) return;
-            superUsesLeft--; document.getElementById('super-count').innerText = superUsesLeft;
-            isSuperActive = true; canvas.style.boxShadow = "0 0 30px var(--neon-purple)";
-            setTimeout(() => { isSuperActive = false; canvas.style.boxShadow = "0 0 20px var(--neon-blue)"; calcSpeed(); }, 3000);
-            calcSpeed();
-        }
-
-        let baseDropInterval = 1000;
-        function calcSpeed() {
-            // Aumenta velocidad cada 60 puntos
-            let speedIncrease = Math.floor(player.score / 60) * 80;
-            dropInterval = Math.max(150, baseDropInterval - speedIncrease);
-            if(isSuperActive) dropInterval = dropInterval * (1 / 0.75); // Ralentiza 0.75x
-        }
-
-        // --- LÓGICA CORE DEL TETRIS ---
-        function arenaSweep() {
-            let rowCount = 0;
-            outer: for (let y = arena.length - 1; y > 0; --y) {
-                for (let x = 0; x < arena[y].length; ++x) { if (arena[y][x] === 0) continue outer; }
-                const row = arena.splice(y, 1)[0].fill(0); arena.unshift(row); ++y; rowCount++;
-            }
-            if (rowCount > 0) { const lineScores = [0, 10, 30, 50, 80]; player.score += lineScores[rowCount]; calcSpeed(); sendMyUpdate(); }
+            broadcastBoard();
         }
 
         function collide(arena, player) {
             const [m, o] = [player.matrix, player.pos];
             for (let y = 0; y < m.length; ++y) {
-                for (let x = 0; x < m[y].length; ++x) { if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) return true; }
-            } return false;
-        }
-
-        function createMatrix(w, h) { const matrix = []; while (h--) matrix.push(new Array(w).fill(0)); return matrix; }
-        function createPiece(type) {
-            if (type === 'I') return [[0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]];
-            else if (type === 'L') return [[0, 2, 0], [0, 2, 0], [0, 2, 2]];
-            else if (type === 'J') return [[0, 3, 0], [0, 3, 0], [3, 3, 0]];
-            else if (type === 'O') return [[4, 4], [4, 4]];
-            else if (type === 'Z') return [[5, 5, 0], [0, 5, 5], [0, 0, 0]];
-            else if (type === 'S') return [[0, 6, 6], [6, 6, 0], [0, 0, 0]];
-            else if (type === 'T') return [[0, 7, 0], [7, 7, 7], [0, 0, 0]];
-        }
-
-        function draw() {
-            context.fillStyle = '#000'; context.fillRect(0, 0, canvas.width, canvas.height);
-            drawMatrix(arena, {x: 0, y: 0}, context); drawMatrix(player.matrix, player.pos, context);
-        }
-
-        function drawMatrix(matrix, offset, ctx) {
-            matrix.forEach((row, y) => { row.forEach((value, x) => {
-                if (value !== 0) { ctx.fillStyle = colors[value]; ctx.fillRect(x + offset.x, y + offset.y, 1, 1); }
-            }); });
-        }
-
-        function merge(arena, player) { player.matrix.forEach((row, y) => { row.forEach((value, x) => { if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value; }); }); }
-
-        function rotate(matrix, dir) {
-            for (let y = 0; y < matrix.length; ++y) { for (let x = 0; x < y; ++x) [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]]; }
-            if (dir > 0) matrix.forEach(row => row.reverse()); else matrix.reverse();
-        }
-
-        function playerDrop() {
-            if (!gameActive || playersState[myPeerId]?.dead) return;
-            player.pos.y++;
-            if (collide(arena, player)) { player.pos.y--; merge(arena, player); arenaSweep(); playerReset(); if(dropCounter > 0) sendMyUpdate(); }
-            dropCounter = 0;
-        }
-
-        function playerHardDrop() {
-            if (!gameActive || playersState[myPeerId]?.dead) return;
-            while (!collide(arena, player)) { player.pos.y++; }
-            player.pos.y--; merge(arena, player); arenaSweep(); playerReset(); dropCounter = 0; sendMyUpdate();
-        }
-
-        function playerMove(dir) {
-            if (!gameActive || playersState[myPeerId]?.dead) return;
-            player.pos.x += dir; if (collide(arena, player)) player.pos.x -= dir;
+                for (let x = 0; x < m[y].length; ++x) {
+                    if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         function playerReset() {
-            const pieces = 'ILJOTSZ'; player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
-            player.pos.y = 0; player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
-            if (collide(arena, player)) myPlayerDied();
+            const pieces = 'ILJOTSZ';
+            player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
+            player.pos.y = 0;
+            player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
+            
+            if (collide(arena, player)) {
+                arena.forEach(row => row.fill(0));
+                playersData[myId].alive = false;
+                sendNetworkMessage({ type: 'DIED', id: myId });
+                showEndScreen(false); // Mostrar derrota a mí mismo
+                
+                // FIXED BUG: If the host dies, we still need to check if someone else won
+                if (isHost) {
+                    checkWinCondition();
+                }
+            }
+            broadcastBoard();
         }
 
-        function playerRotate(dir) {
-            if (!gameActive || playersState[myPeerId]?.dead) return;
-            const pos = player.pos.x; let offset = 1; rotate(player.matrix, dir);
-            while (collide(arena, player)) {
-                player.pos.x += offset; offset = -(offset + (offset > 0 ? 1 : -1));
-                if (offset > player.matrix[0].length) { rotate(player.matrix, -dir); player.pos.x = pos; return; }
+        function arenaSweep() {
+            let rowCount = 0;
+            outer: for (let y = arena.length - 1; y > 0; --y) {
+                for (let x = 0; x < arena[y].length; ++x) {
+                    if (arena[y][x] === 0 || arena[y][x] === 8) continue outer; 
+                }
+                const row = arena.splice(y, 1)[0].fill(0);
+                arena.unshift(row);
+                ++y;
+                rowCount++;
+            }
+            if (rowCount > 0) {
+                player.score += [0, 10, 30, 50, 80][rowCount] || 100;
+                attackCharge += rowCount;
+                document.getElementById('score').innerText = player.score;
+                document.getElementById('charge').innerText = attackCharge;
             }
         }
 
-        let dropCounter = 0; let dropInterval = 1000; let lastTime = 0;
-        function update(time = 0) {
-            if (!gameActive) return;
-            if (playersState[myPeerId]?.dead) { requestAnimationFrame(update); return; } // Si está muerto en equipo, no updatea físicas pero sigue el loop
-            const deltaTime = time - lastTime; lastTime = time;
-            dropCounter += deltaTime; if (dropCounter > dropInterval) playerDrop();
-            draw(); requestAnimationFrame(update);
+        function triggerAttack() {
+            if(gameState !== 'PLAYING' || !playersData[myId].alive) return;
+            if (attackCharge > 0 && targetId && playersData[targetId] && playersData[targetId].alive) {
+                sendNetworkMessage({ 
+                    type: 'GARBAGE', 
+                    target: targetId, 
+                    lines: attackCharge 
+                });
+                attackCharge = 0;
+                document.getElementById('charge').innerText = attackCharge;
+            }
         }
 
-        const arena = createMatrix(ARENA_WIDTH, ARENA_HEIGHT);
-        const player = { pos: {x: 0, y: 0}, matrix: null, score: 0 };
+        function receiveGarbage(lines) {
+            if(gameState !== 'PLAYING' || !playersData[myId].alive) return;
+            for (let i = 0; i < lines; i++) {
+                arena.shift(); 
+                let newRow = new Array(12).fill(8); 
+                newRow[Math.floor(Math.random() * 12)] = 0; 
+                arena.push(newRow);
+            }
+            broadcastBoard();
+        }
 
+        function playerDrop() {
+            if(gameState !== 'PLAYING' || !playersData[myId].alive) return;
+            player.pos.y++;
+            if (collide(arena, player)) {
+                player.pos.y--;
+                merge(arena, player);
+                playerReset();
+                arenaSweep();
+            }
+            dropCounter = 0;
+        }
+
+        // Hard Drop Logic
+        function playerHardDrop() {
+            if(gameState !== 'PLAYING' || !playersData[myId].alive) return;
+            while (!collide(arena, player)) {
+                player.pos.y++;
+            }
+            player.pos.y--;
+            merge(arena, player);
+            playerReset();
+            arenaSweep();
+            dropCounter = 0;
+        }
+
+        function playerMove(dir) {
+            if(gameState !== 'PLAYING' || !playersData[myId].alive) return;
+            player.pos.x += dir;
+            if (collide(arena, player)) player.pos.x -= dir;
+        }
+
+        function playerRotate(dir) {
+            if(gameState !== 'PLAYING' || !playersData[myId].alive) return;
+            const pos = player.pos.x;
+            let offset = 1;
+            rotate(player.matrix, dir);
+            while (collide(arena, player)) {
+                player.pos.x += offset;
+                offset = -(offset + (offset > 0 ? 1 : -1));
+                if (offset > player.matrix[0].length) {
+                    rotate(player.matrix, -dir);
+                    player.pos.x = pos;
+                    return;
+                }
+            }
+        }
+
+        function rotate(matrix, dir) {
+            for (let y = 0; y < matrix.length; ++y) {
+                for (let x = 0; x < y; ++x) {
+                    [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+                }
+            }
+            if (dir > 0) matrix.forEach(row => row.reverse());
+            else matrix.reverse();
+        }
+
+        function update(time = 0) {
+            if (gameState !== 'PLAYING') return;
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+            if (dropCounter > dropInterval && playersData[myId] && playersData[myId].alive) {
+                playerDrop();
+            }
+            draw();
+            animationId = requestAnimationFrame(update);
+        }
+
+        // --- MULTIPLAYER LOGIC ---
+
+        function switchScreen(screenName) {
+            Object.values(screens).forEach(s => s.classList.remove('active'));
+            screens[screenName].classList.add('active');
+        }
+
+        function initPlayerInfo() {
+            myName = document.getElementById('player-name').value.trim() || 'Player_' + Math.floor(Math.random()*1000);
+            playersData = {};
+            targetId = null;
+        }
+
+        function setupAudioCalls() {
+            peer.on('call', call => {
+                call.answer(); 
+                call.on('stream', remoteStream => {
+                    if (remoteAudioNode) {
+                        remoteAudioNode.pause();
+                        remoteAudioNode.srcObject = null;
+                    }
+                    remoteAudioNode = new Audio();
+                    remoteAudioNode.srcObject = remoteStream;
+                    remoteAudioNode.play().catch(e => console.log("Stream play error:", e));
+                });
+            });
+        }
+
+        function createRoom() {
+            initPlayerInfo();
+            statusTxt.innerText = "Creating room...";
+            document.getElementById('btn-create').disabled = true;
+            
+            peer = new Peer();
+            peer.on('open', (id) => {
+                isHost = true;
+                myId = id;
+                document.getElementById('room-id-display').innerText = id;
+                document.getElementById('btn-start').style.display = 'block';
+                document.getElementById('btn-continue').style.display = 'inline-block';
+                
+                const qrContainer = document.getElementById('qr-code');
+                qrContainer.innerHTML = '';
+                qrContainer.style.display = 'inline-block';
+                new QRCode(qrContainer, {
+                    text: id,
+                    width: 128,
+                    height: 128,
+                    colorDark : "#e63946",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.L
+                });
+
+                setupAudioCalls();
+                addPlayerToLobby(myId, myName, myTrophies);
+                switchScreen('lobby');
+            });
+
+            peer.on('connection', (conn) => {
+                if(Object.keys(connections).length >= 9) {
+                    conn.send({type: 'ERROR', msg: 'Room full'});
+                    setTimeout(() => conn.close(), 500);
+                    return;
+                }
+                if (gameState === 'PLAYING') {
+                    conn.send({type: 'ERROR', msg: 'Game already in progress'});
+                    setTimeout(() => conn.close(), 500);
+                    return;
+                }
+
+                connections[conn.peer] = conn;
+                
+                conn.on('data', (data) => {
+                    handleNetworkData(data, conn.peer);
+                });
+                
+                conn.on('close', () => {
+                    delete connections[conn.peer];
+                    removePlayer(conn.peer);
+                });
+            });
+        }
+
+        function joinRoom() {
+            const roomId = document.getElementById('room-id-input').value.trim();
+            if (!roomId) return alert("Enter a Room ID");
+            initPlayerInfo();
+            statusTxt.innerText = "Connecting...";
+            document.getElementById('btn-join').disabled = true;
+
+            peer = new Peer();
+            peer.on('open', (id) => {
+                isHost = false;
+                myId = id;
+                
+                setupAudioCalls();
+                hostConn = peer.connect(roomId);
+                
+                hostConn.on('open', () => {
+                    document.getElementById('room-id-display').innerText = roomId;
+                    document.getElementById('qr-code').style.display = 'none';
+                    document.getElementById('btn-start').style.display = 'none';
+                    document.getElementById('btn-continue').style.display = 'none';
+                    switchScreen('lobby');
+                    
+                    hostConn.send({ type: 'JOIN', id: myId, name: myName, trophies: myTrophies });
+                });
+
+                hostConn.on('data', (data) => {
+                    handleNetworkData(data, roomId);
+                });
+
+                hostConn.on('close', () => {
+                    alert("Host disconnected");
+                    leaveRoom();
+                });
+            });
+        }
+
+        function addPlayerToLobby(id, name, trophies) {
+            playersData[id] = { name, trophies, alive: true, board: createMatrix(12, 20) };
+            updateLobbyUI();
+            if (isHost) broadcastLobbyState();
+        }
+
+        function removePlayer(id) {
+            delete playersData[id];
+            updateLobbyUI();
+            if(gameState === 'PLAYING') {
+                checkWinCondition();
+                setupOpponentViews(); 
+            }
+            if (isHost) broadcastLobbyState();
+        }
+
+        function updateLobbyUI() {
+            const list = document.getElementById('lobby-players');
+            list.innerHTML = '';
+            let count = 0;
+            for (let id in playersData) {
+                count++;
+                let li = document.createElement('li');
+                li.innerHTML = `<span>${playersData[id].name} ${id===myId?'(You)':''}</span> <span>🏆 ${playersData[id].trophies}</span>`;
+                list.appendChild(li);
+            }
+            document.getElementById('player-count').innerText = count;
+            if (isHost) {
+                document.getElementById('btn-start').disabled = count < 2; 
+            }
+        }
+
+        function sendNetworkMessage(msg) {
+            if (isHost) {
+                if (msg.type === 'GARBAGE') {
+                    if (msg.target === myId) receiveGarbage(msg.lines);
+                    else if (connections[msg.target]) connections[msg.target].send(msg);
+                } else {
+                    for (let id in connections) connections[id].send(msg);
+                }
+            } else if (hostConn) {
+                hostConn.send(msg); 
+            }
+        }
+
+        function handleNetworkData(data, senderId) {
+            switch(data.type) {
+                case 'JOIN':
+                    if (isHost) addPlayerToLobby(data.id, data.name, data.trophies);
+                    break;
+                case 'LOBBY_STATE':
+                    playersData = data.players;
+                    updateLobbyUI();
+                    break;
+                case 'START':
+                    startLocalGame();
+                    break;
+                case 'BOARD':
+                    if (playersData[data.id]) playersData[data.id].board = data.matrix;
+                    if (isHost) broadcastBoard(data.id, data.matrix); 
+                    break;
+                case 'GARBAGE':
+                    if (isHost) {
+                        if (data.target === myId) receiveGarbage(data.lines);
+                        else if (connections[data.target]) connections[data.target].send(data);
+                    } else if (data.target === myId) {
+                        receiveGarbage(data.lines);
+                    }
+                    break;
+                case 'DIED':
+                    if (playersData[data.id]) playersData[data.id].alive = false;
+                    if (isHost) {
+                        sendNetworkMessage(data); 
+                        checkWinCondition();
+                    }
+                    autoSwitchTarget();
+                    break;
+                case 'GAME_OVER':
+                    showEndScreen(data.winnerId === myId, data.winnerName);
+                    break;
+                case 'SUDDEN_DEATH':
+                    triggerSuddenDeath();
+                    break;
+                case 'CONTINUE':
+                    switchScreen('lobby');
+                    gameState = 'LOBBY';
+                    break;
+                case 'ERROR':
+                    alert(data.msg);
+                    leaveRoom();
+                    break;
+            }
+        }
+
+        function broadcastLobbyState() {
+            sendNetworkMessage({ type: 'LOBBY_STATE', players: playersData });
+        }
+
+        function broadcastBoard(id = myId, matrix = arena) {
+            sendNetworkMessage({ type: 'BOARD', id, matrix });
+        }
+
+        // --- GAME FLOW ---
+
+        function startGame() {
+            if (!isHost) return;
+            sendNetworkMessage({ type: 'START' });
+            
+            if (suddenDeathTimer) clearTimeout(suddenDeathTimer);
+            suddenDeathTimer = setTimeout(() => {
+                triggerSuddenDeath();
+                sendNetworkMessage({ type: 'SUDDEN_DEATH' });
+            }, 8 * 60 * 1000); 
+
+            startLocalGame();
+        }
+
+        function startLocalGame() {
+            gameState = 'PLAYING';
+            arena = createMatrix(12, 20);
+            player.score = 0;
+            attackCharge = 0;
+            dropInterval = 1000; 
+            document.getElementById('score').innerText = 0;
+            document.getElementById('charge').innerText = 0;
+            document.getElementById('sudden-death-msg').style.display = 'none';
+            
+            for(let id in playersData) {
+                playersData[id].alive = true;
+                playersData[id].board = createMatrix(12, 20);
+            }
+            
+            setupOpponentViews();
+            playerReset();
+            startMusicAndStream();
+            switchScreen('game');
+            lastTime = performance.now();
+            update();
+        }
+
+        function triggerSuddenDeath() {
+            dropInterval = 500; 
+            if (isHost && customAudio) {
+                customAudio.playbackRate = 2.0; 
+            }
+            
+            const msg = document.getElementById('sudden-death-msg');
+            msg.style.display = 'block';
+            setTimeout(() => msg.style.display = 'none', 3000);
+        }
+
+        function setupOpponentViews() {
+            opponentsContainer.innerHTML = '';
+            targetId = null;
+            document.getElementById('current-target-name').innerText = 'None';
+
+            for (let id in playersData) {
+                if (id === myId) continue;
+                
+                let div = document.createElement('div');
+                div.className = 'opponent';
+                div.innerHTML = `
+                    <div class="opponent-name">${playersData[id].name}</div>
+                    <canvas id="canvas-${id}" width="120" height="200"></canvas>
+                    <button class="target-btn" id="btn-${id}" onclick="setTarget('${id}')">Target</button>
+                `;
+                opponentsContainer.appendChild(div);
+
+                let ctx = document.getElementById(`canvas-${id}`).getContext('2d');
+                ctx.scale(10, 10);
+                playersData[id].ctx = ctx;
+
+                if (!targetId) setTarget(id); 
+            }
+        }
+
+        function drawOpponent(id) {
+            const opp = playersData[id];
+            if (!opp || !opp.ctx) return;
+            
+            opp.ctx.fillStyle = opp.alive ? '#111' : '#400'; 
+            opp.ctx.fillRect(0, 0, 120, 200);
+            drawMatrix(opp.board, {x:0, y:0}, opp.ctx, 1);
+            
+            if (!opp.alive) {
+                opp.ctx.fillStyle = 'rgba(255,0,0,0.5)';
+                opp.ctx.fillRect(0,0,12,20);
+            }
+        }
+
+        function setTarget(id) {
+            if(targetId) {
+                let oldBtn = document.getElementById(`btn-${targetId}`);
+                if(oldBtn) oldBtn.classList.remove('selected');
+            }
+            targetId = id;
+            let newBtn = document.getElementById(`btn-${id}`);
+            if(newBtn) newBtn.classList.add('selected');
+            document.getElementById('current-target-name').innerText = playersData[id].name;
+        }
+
+        function autoSwitchTarget() {
+            if (targetId && playersData[targetId] && !playersData[targetId].alive) {
+                for(let id in playersData) {
+                    if (id !== myId && playersData[id].alive) {
+                        setTarget(id);
+                        return;
+                    }
+                }
+                document.getElementById('current-target-name').innerText = 'None';
+                targetId = null;
+            }
+        }
+
+        function checkWinCondition() {
+            if (!isHost) return;
+            let alivePlayers = [];
+            for (let id in playersData) {
+                if (playersData[id].alive) alivePlayers.push(id);
+            }
+            
+            if (alivePlayers.length <= 1) {
+                let winnerId = alivePlayers.length === 1 ? alivePlayers[0] : null;
+                let winnerName = winnerId ? playersData[winnerId].name : 'No one';
+                
+                sendNetworkMessage({ type: 'GAME_OVER', winnerId, winnerName });
+                
+                // Si el host no ha muerto ya (o si es el ganador), muestra la pantalla final.
+                // Si ya había muerto, la pantalla se mostró en playerReset(). Sin embargo, llamarlo
+                // aquí de nuevo actualiza correctamente el nombre del ganador en la pantalla.
+                showEndScreen(winnerId === myId, winnerName);
+            }
+        }
+
+        function showEndScreen(isWinner, winnerName) {
+            gameState = 'END';
+            cancelAnimationFrame(animationId);
+            if (suddenDeathTimer) clearTimeout(suddenDeathTimer);
+            stopMusic();
+            
+            const title = document.getElementById('end-title');
+            const sub = document.getElementById('end-subtitle');
+            
+            if (isWinner) {
+                title.innerText = "VICTORY!";
+                title.style.color = "#0DFF72";
+                sub.innerText = "You are the last player standing.";
+                myTrophies += 1;
+                localStorage.setItem('tetrisTrophies', myTrophies);
+                document.getElementById('menu-trophies').innerText = myTrophies;
+            } else {
+                title.innerText = "DEFEAT";
+                title.style.color = "#FF0D72";
+                sub.innerText = winnerName ? `${winnerName} won the match.` : "You have been eliminated.";
+            }
+            
+            switchScreen('end');
+        }
+
+        function continueToLobby() {
+            if (!isHost) return;
+            sendNetworkMessage({ type: 'CONTINUE' });
+            gameState = 'LOBBY';
+            switchScreen('lobby');
+        }
+
+        function leaveRoom() {
+            if (peer) peer.destroy();
+            peer = null;
+            connections = {};
+            hostConn = null;
+            playersData = {};
+            if (suddenDeathTimer) clearTimeout(suddenDeathTimer);
+            stopMusic();
+            document.getElementById('btn-create').disabled = false;
+            document.getElementById('btn-join').disabled = false;
+            statusTxt.innerText = "";
+            switchScreen('menu');
+            gameState = 'MENU';
+        }
+
+        // --- MUSIC LGOIC ---
+        function startMusicAndStream() {
+            stopMusic();
+            
+            if (isHost) {
+                const fileInput = document.getElementById('audio-file');
+                if (fileInput.files.length > 0) {
+                    const url = URL.createObjectURL(fileInput.files[0]);
+                    customAudio = new Audio(url);
+                    customAudio.loop = true;
+                    customAudio.volume = 0.5;
+                    
+                    customAudio.play().then(() => {
+                        const captureFunc = customAudio.captureStream || customAudio.mozCaptureStream;
+                        if (captureFunc) {
+                            myAudioStream = captureFunc.call(customAudio);
+                            for (let id in connections) {
+                                peer.call(id, myAudioStream);
+                            }
+                        }
+                    }).catch(e => console.log("Audio play blocked", e));
+                }
+            }
+        }
+
+        function stopMusic() {
+            if (customAudio) {
+                customAudio.pause();
+                customAudio.currentTime = 0;
+            }
+            if (remoteAudioNode) {
+                remoteAudioNode.pause();
+                remoteAudioNode.srcObject = null;
+            }
+        }
+
+        // Keyboard inputs
         document.addEventListener('keydown', event => {
-            if (!gameActive) return;
-            if (event.keyCode === 37) playerMove(-1); else if (event.keyCode === 39) playerMove(1);
-            else if (event.keyCode === 40) playerDrop(); else if (event.keyCode === 38) playerRotate(1);
-            else if (event.keyCode === 32) playerHardDrop(); // Espacio para Hard Drop
+            if(gameState !== 'PLAYING') return;
+            if (event.keyCode === 37) playerMove(-1);
+            else if (event.keyCode === 39) playerMove(1);
+            else if (event.keyCode === 40) playerHardDrop();
+            else if (event.keyCode === 81) playerRotate(-1);
+            else if (event.keyCode === 87 || event.keyCode === 38) playerRotate(1);
         });
+
     </script>
 </body>
 </html>
