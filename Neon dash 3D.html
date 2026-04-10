@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Dash 3D - MultiVersus</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --neon-blue: #00ffcc;
+            --neon-pink: #ff00ff;
+            --neon-yellow: #ffff00;
+            --bg-color: #0a0a0a;
+        }
+        body {
+            margin: 0; overflow: hidden; background-color: var(--bg-color);
+            font-family: 'Courier New', Courier, monospace; color: white;
+            touch-action: none; user-select: none;
+        }
+        canvas { display: block; }
+        
+        /* UI Overlays */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: rgba(10, 10, 10, 0.95); z-index: 10;
+        }
+        .hidden { display: none !important; }
+        
+        h1 { color: var(--neon-pink); text-shadow: 0 0 20px var(--neon-pink); font-size: 3rem; text-align: center; }
+        h2 { color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); }
+
+        button, .file-upload-label {
+            background: transparent; color: var(--neon-blue); border: 2px solid var(--neon-blue);
+            padding: 15px 30px; margin: 10px; font-size: 1.2rem; font-family: inherit;
+            cursor: pointer; box-shadow: 0 0 10px var(--neon-blue) inset, 0 0 10px var(--neon-blue);
+            text-transform: uppercase; display: inline-block; text-align: center;
+        }
+        button:hover, .file-upload-label:hover { background: var(--neon-blue); color: #000; }
+        button.pink { color: var(--neon-pink); border-color: var(--neon-pink); box-shadow: 0 0 10px var(--neon-pink) inset; }
+        button.pink:hover { background: var(--neon-pink); color: #000; }
+
+        input[type="text"] { background: #222; color: white; border: 1px solid var(--neon-blue); padding: 10px; font-size: 1.2rem; text-align: center; margin-bottom: 20px; }
+        input[type="file"] { display: none; }
+
+        /* In-Game UI */
+        #gameUI { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+        #infoPanel { position: absolute; top: 20px; left: 20px; color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); font-size: 1.5rem; }
+        #reactionsBox { position: absolute; bottom: 20px; right: 20px; display: flex; gap: 10px; pointer-events: auto; }
+        .reaction-btn {
+            font-size: 2rem; background: rgba(0,0,0,0.5); border: 1px solid #555;
+            border-radius: 50%; width: 50px; height: 50px; padding: 0; margin: 0; box-shadow: none; pointer-events: auto;
+        }
+        #floatingReactions { position: absolute; top: 100px; right: 20px; font-size: 3rem; display: flex; flex-direction: column; gap: 10px; }
+        
+        #playerCount { margin-top: 10px; font-size: 1.2rem; color: var(--neon-yellow); }
+
+        /* Editor UI */
+        #editorWrapper { width: 90vw; overflow-x: auto; background: #111; border: 2px solid #333; margin: 20px; }
+        #editorGrid {
+            display: grid; grid-template-rows: repeat(5, 30px);
+            gap: 2px; padding: 5px; width: max-content;
+        }
+        .cell { width: 30px; height: 30px; background: #222; border: 1px solid #444; cursor: pointer; }
+        .cell[data-type="block"] { background: var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue); }
+        .cell[data-type="spike"] { background: var(--neon-pink); box-shadow: 0 0 10px var(--neon-pink); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
+        .cell[data-type="meta"] { background: var(--neon-yellow); box-shadow: 0 0 10px var(--neon-yellow); background-image: repeating-linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000), repeating-linear-gradient(45deg, #000 25%, #fff 25%, #fff 75%, #000 75%, #000); background-position: 0 0, 15px 15px; background-size: 30px 30px; }
+    </style>
+</head>
+<body>
+
+    <div id="menuScreen" class="screen">
+        <h1>NEON DASH 3D<br>MULTIVERSUS</h1>
+        <div>
+            <label>Color: </label><input type="color" id="playerColor" value="#00ffcc">
+        </div>
+        <label class="file-upload-label">
+            Cargar Música (MP3)
+            <input type="file" id="musicUpload" accept="audio/*">
+        </label>
+        <p id="musicStatus" style="color:var(--neon-yellow); font-size:0.9rem;"></p>
+        <button onclick="showScreen('editorScreen')">Editor de Nivel</button>
+        <button class="pink" onclick="createRoom()">Crear Sala (Host)</button>
+        <button onclick="showScreen('joinScreen')">Unirse a Sala</button>
+    </div>
+
+    <div id="joinScreen" class="screen hidden">
+        <h2>UNIRSE A SALA</h2>
+        <input type="text" id="roomIdInput" placeholder="ID de 6 dígitos" maxlength="6">
+        <button onclick="joinRoom()">Conectar</button>
+        <button class="pink" onclick="showScreen('menuScreen')">Volver</button>
+    </div>
+
+    <div id="lobbyScreen" class="screen hidden">
+        <h2>SALA DE ESPERA</h2>
+        <h1 id="lobbyIdDisplay">ID: ------</h1>
+        <div id="qrCode"></div>
+        <p id="lobbyStatus">Esperando jugadores...</p>
+        <p id="playerCount">Jugadores: 1 / 10</p>
+        <button id="btnStartGame" class="hidden pink" onclick="startGame()">Empezar Partida</button>
+        <button onclick="disconnectAndLeave()">Salir</button>
+    </div>
+
+    <div id="editorScreen" class="screen hidden">
+        <h2>EDITOR (INFINITO)</h2>
+        <p>Herramienta: <select id="toolSelect">
+            <option value="block">Bloque</option>
+            <option value="spike">Pincho</option>
+            <option value="meta">Línea de Meta</option>
+            <option value="empty">Borrar</option>
+        </select></p>
+        <div id="editorWrapper">
+            <div id="editorGrid"></div>
+        </div>
+        <div>
+            <button onclick="addColumns(20)">+20 Columnas</button>
+            <button class="pink" onclick="saveLevel()">Guardar Nivel</button>
+            <button onclick="showScreen('menuScreen')">Volver</button>
+        </div>
+    </div>
+
+    <div id="gameUI" class="hidden">
+        <div id="infoPanel">
+            <span id="progressDisplay">0%</span>
+        </div>
+        <div id="floatingReactions"></div>
+        <div id="reactionsBox">
+            <button class="reaction-btn" onclick="sendReaction('😅')">😅</button>
+            <button class="reaction-btn" onclick="sendReaction('🥶')">🥶</button>
+            <button class="reaction-btn" onclick="sendReaction('🤬')">🤬</button>
+            <button class="reaction-btn" onclick="sendReaction('🥳')">🥳</button>
+        </div>
+    </div>
+
+    <script>
+        // --- VARIABLES GLOBALES ---
+        let scene, camera, renderer;
+        let playerMesh;
+        let otherPlayers = {}; // Meshes de otros jugadores: { peerId: Mesh }
+        let gameActive = false;
+        let isHost = false;
+        
+        // Red y Conexiones
+        let peer;
+        let myId = "";
+        let hostConnection = null; // Si soy cliente
+        let clientConnections = {}; // Si soy host (máx 9 clientes = 10 jugadores)
+        let totalPlayers = 1;
+
+        // Datos del Juego
+        let customLevel = []; 
+        let bgAudio = new Audio();
+        let myColor = "#00ffcc";
+        
+        // Físicas y Cámara
+        const gravity = -0.015;
+        const jumpForce = 0.3;
+        const forwardSpeed = 0.2;
+        let playerVelocity = { y: 0 };
+        let isGrounded = true;
+        let gameObjects = []; 
+        
+        let camRotX = 0, camRotY = 0;
+        let isDragging = false;
+        let prevTouchX = 0, prevTouchY = 0;
+
+        // UI
+        const screens = ['menuScreen', 'joinScreen', 'lobbyScreen', 'editorScreen'];
+        function showScreen(id) {
+            screens.forEach(s => document.getElementById(s).classList.add('hidden'));
+            if(id) document.getElementById(id).classList.remove('hidden');
+        }
+
+        // --- SISTEMA MULTIJUGADOR (PEERJS) ---
+        function initPeer() {
+            peer = new Peer(generateId());
+            peer.on('open', id => { myId = id; });
+            
+            peer.on('connection', conn => {
+                if(isHost) {
+                    if(Object.keys(clientConnections).length >= 9) {
+                        conn.send({type: 'ERROR', msg: 'Sala llena (Máx 10)'});
+                        setTimeout(() => conn.close(), 500);
+                        return;
+                    }
+                    // Nuevo cliente se une
+                    clientConnections[conn.peer] = conn;
+                    updatePlayerCount();
+                    
+                    conn.on('data', data => handleHostData(conn.peer, data));
+                    conn.on('close', () => {
+                        delete clientConnections[conn.peer];
+                        updatePlayerCount();
+                        removePlayerMesh(conn.peer);
+                        broadcast({type: 'PLAYER_DISCONNECTED', id: conn.peer});
+                    });
+                }
+            });
+        }
+        initPeer();
+
+        function generateId() { return Math.floor(100000 + Math.random() * 900000).toString(); }
+
+        function createRoom() {
+            isHost = true;
+            clientConnections = {};
+            totalPlayers = 1;
+            showScreen('lobbyScreen');
+            document.getElementById('lobbyIdDisplay').innerText = `ID: ${myId}`;
+            document.getElementById('btnStartGame').classList.remove('hidden');
+            document.getElementById('qrCode').innerHTML = "";
+            new QRCode(document.getElementById("qrCode"), { text: myId, width: 128, height: 128, colorDark: "#00ffcc", colorLight: "#0a0a0a" });
+            updatePlayerCount();
+        }
+
+        function joinRoom() {
+            const roomId = document.getElementById('roomIdInput').value;
+            if(roomId.length !== 6) return alert("ID inválido");
+            isHost = false;
+            
+            hostConnection = peer.connect(roomId);
+            hostConnection.on('open', () => {
+                showScreen('lobbyScreen');
+                document.getElementById('lobbyIdDisplay').innerText = `Unido a: ${roomId}`;
+                document.getElementById('lobbyStatus').innerText = "Esperando que el Host inicie...";
+                document.getElementById('qrCode').style.display = 'none';
+            });
+
+            hostConnection.on('data', data => {
+                if(data.type === 'START') { customLevel = data.level; init3DGame(); }
+                if(data.type === 'SYNC') syncOtherPlayer(data.id, data.z, data.y, data.color);
+                if(data.type === 'REACTION') showFloatingReaction(data.emoji);
+                if(data.type === 'PLAYER_DISCONNECTED') removePlayerMesh(data.id);
+                if(data.type === 'GAMEOVER') endGame(`${data.id} ha ganado!`);
+                if(data.type === 'ERROR') { alert(data.msg); disconnectAndLeave(); }
+            });
+            hostConnection.on('close', () => { alert("Host desconectado"); disconnectAndLeave(); });
+        }
+
+        // Lógica del Host para distribuir mensajes a todos
+        function handleHostData(senderId, data) {
+            // El host retransmite los datos de un cliente a TODOS los demás clientes
+            if(data.type === 'SYNC' || data.type === 'REACTION' || data.type === 'GAMEOVER') {
+                data.id = senderId; // Añadir ID para saber de quién es
+                
+                // Si es sync, actualizarlo en la pantalla del host primero
+                if(data.type === 'SYNC') syncOtherPlayer(senderId, data.z, data.y, data.color);
+                if(data.type === 'REACTION') showFloatingReaction(data.emoji);
+                
+                // Retransmitir al resto
+                broadcast(data, senderId);
+            }
+        }
+
+        function broadcast(data, excludeId = null) {
+            Object.values(clientConnections).forEach(conn => {
+                if(conn.peer !== excludeId && conn.open) conn.send(data);
+            });
+        }
+
+        function updatePlayerCount() {
+            totalPlayers = 1 + Object.keys(clientConnections).length;
+            document.getElementById('playerCount').innerText = `Jugadores: ${totalPlayers} / 10`;
+            if(totalPlayers > 1) document.getElementById('lobbyStatus').innerText = "¡Jugadores conectados!";
+        }
+
+        function disconnectAndLeave() {
+            if(isHost) {
+                broadcast({type: 'ERROR', msg: 'El Host cerró la sala'});
+                Object.values(clientConnections).forEach(c => c.close());
+            } else if(hostConnection) {
+                hostConnection.close();
+            }
+            isHost = false; hostConnection = null; clientConnections = {};
+            showScreen('menuScreen');
+        }
+
+        // --- SISTEMA DE AUDIO LOCAL ---
+        document.getElementById('musicUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const url = URL.createObjectURL(file);
+                bgAudio.src = url;
+                bgAudio.loop = true;
+                document.getElementById('musicStatus').innerText = `Música cargada: ${file.name}`;
+            }
+        });
+
+        // --- EDITOR DE NIVELES (INFINITO) ---
+        let editorCols = 0;
+        const editorGrid = document.getElementById('editorGrid');
+
+        function addColumns(amount) {
+            const prevCols = editorCols;
+            editorCols += amount;
+            editorGrid.style.gridTemplateColumns = `repeat(${editorCols}, 30px)`;
+            
+            for(let c = prevCols; c < editorCols; c++) {
+                for(let r = 0; r < 5; r++) {
+                    let cell = document.createElement('div');
+                    cell.className = 'cell';
+                    // Calcular el orden correcto para CSS Grid
+                    cell.style.gridColumn = c + 1;
+                    cell.style.gridRow = r + 1;
+                    
+                    // Lógica de dibujado o borrado
+                    cell.onmousedown = (e) => applyTool(cell);
+                    cell.onmouseenter = (e) => { if(e.buttons === 1) applyTool(cell); };
+                    
+                    editorGrid.appendChild(cell);
+                }
+            }
+        }
+
+        function applyTool(cell) {
+            const tool = document.getElementById('toolSelect').value;
+            cell.dataset.type = tool;
+        }
+
+        // Iniciar con 50 columnas
+        addColumns(50);
+
+        function saveLevel() {
+            customLevel = [];
+            let metaPlaced = false;
+            
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                let type = cell.dataset.type;
+                if(type && type !== 'empty') {
+                    let col = parseInt(cell.style.gridColumn) - 1;
+                    let row = parseInt(cell.style.gridRow) - 1;
+                    let invertedRow = 4 - row; // Suelo es 0
+                    
+                    customLevel.push({
+                        t: type === 'block' ? 'b' : (type === 'spike' ? 's' : 'm'), // 'm' de meta
+                        x: 0,
+                        y: invertedRow + 0.5,
+                        z: -(col * 2 + 5)
+                    });
+                    if(type === 'meta') metaPlaced = true;
+                }
+            });
+            
+            if(!metaPlaced) return alert("¡Debes colocar al menos una 'Línea de Meta' en el editor!");
+            alert("¡Nivel guardado!");
+        }
+
+        // --- MOTOR 3D (THREE.JS) ---
+        function startGame() {
+            if(!isHost) return;
+            if(customLevel.length === 0) return alert("¡Crea y guarda un nivel primero o usa uno por defecto!");
+            
+            broadcast({type: 'START', level: customLevel});
+            init3DGame();
+        }
+
+        function init3DGame() {
+            myColor = document.getElementById('playerColor').value;
+            showScreen(null);
+            document.getElementById('gameUI').classList.remove('hidden');
+            
+            if(bgAudio.src) bgAudio.play().catch(e => console.log("Audio play error", e));
+            
+            if(renderer) { document.body.removeChild(renderer.domElement); gameObjects = []; otherPlayers = {}; }
+
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0a0a0a, 0.05);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 100);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Iluminación
+            scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+            const pointLight = new THREE.PointLight(0x00ffcc, 2, 50);
+            pointLight.position.set(0, 10, 0);
+            scene.add(pointLight);
+
+            // Suelo
+            const gridHelper = new THREE.GridHelper(500, 250, 0x00ffcc, 0x222222);
+            gridHelper.position.y = 0;
+            scene.add(gridHelper);
+
+            // Jugador local
+            const geoCube = new THREE.BoxGeometry(1, 1, 1);
+            playerMesh = new THREE.Mesh(geoCube, new THREE.MeshBasicMaterial({ color: myColor, wireframe: true }));
+            playerMesh.position.set(0, 0.5, 0);
+            scene.add(playerMesh);
+
+            // Materiales del mundo
+            const blockMat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x004433 });
+            const spikeMat = new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0x440044 });
+            const metaMat = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true });
+
+            // Construir Nivel
+            let furthestZ = 0;
+            customLevel.forEach(obj => {
+                let mesh;
+                if(obj.t === 'b') {
+                    mesh = new THREE.Mesh(geoCube, blockMat);
+                    mesh.userData = { type: 'b' };
+                } else if(obj.t === 's') {
+                    mesh = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1, 4), spikeMat);
+                    mesh.userData = { type: 's' };
+                } else if(obj.t === 'm') {
+                    // Meta
+                    mesh = new THREE.Mesh(new THREE.BoxGeometry(10, 5, 0.5), metaMat);
+                    mesh.userData = { type: 'm', isFinish: true };
+                }
+                
+                mesh.position.set(obj.x, obj.y, obj.z);
+                scene.add(mesh);
+                gameObjects.push(mesh);
+                if(obj.z < furthestZ) furthestZ = obj.z;
+            });
+
+            // Respaldo de Z final por si no pusieron meta
+            gameObjects.push({userData:{isFinish: false}, isVirtualLimit: true, z: furthestZ - 10});
+
+            camera.position.set(0, 3, 5);
+            gameActive = true;
+            camRotX = 0; camRotY = 0; // reset cam
+            animate();
+        }
+
+        // --- CONTROLES Y CÁMARA ORBITAL ---
+        window.addEventListener('keydown', (e) => { if(e.code === 'Space') doJump(); });
+        
+        // Touch para saltar Y orbitar
+        window.addEventListener('touchstart', (e) => {
+            if(e.target.tagName === 'BUTTON') return;
+            isDragging = true;
+            prevTouchX = e.touches[0].clientX;
+            prevTouchY = e.touches[0].clientY;
+            doJump(); // Tocar pantalla salta
+        }, {passive: false});
+
+        window.addEventListener('touchmove', (e) => {
+            if(!isDragging || !gameActive) return;
+            let touch = e.touches[0];
+            let dx = touch.clientX - prevTouchX;
+            let dy = touch.clientY - prevTouchY;
+            
+            camRotX += dx * 0.01; // Eje X (orbitar a los lados)
+            camRotY -= dy * 0.01; // Eje Y (arriba/abajo)
+            
+            // Limitar rotación arriba/abajo
+            camRotY = Math.max(-0.5, Math.min(1.5, camRotY));
+
+            prevTouchX = touch.clientX;
+            prevTouchY = touch.clientY;
+        }, {passive: false});
+
+        window.addEventListener('touchend', () => isDragging = false);
+        
+        // Ratón para PC
+        window.addEventListener('mousedown', (e) => {
+            if(e.target.tagName !== 'BUTTON') {
+                isDragging = true; prevTouchX = e.clientX; prevTouchY = e.clientY; doJump();
+            }
+        });
+        window.addEventListener('mousemove', (e) => {
+            if(!isDragging || !gameActive) return;
+            let dx = e.clientX - prevTouchX; let dy = e.clientY - prevTouchY;
+            camRotX += dx * 0.01; camRotY -= dy * 0.01;
+            camRotY = Math.max(-0.5, Math.min(1.5, camRotY));
+            prevTouchX = e.clientX; prevTouchY = e.clientY;
+        });
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        function doJump() {
+            if(isGrounded && gameActive) { playerVelocity.y = jumpForce; isGrounded = false; }
+        }
+
+        // --- LÓGICA DEL JUEGO Y FÍSICAS ---
+        function checkCollisions() {
+            const pBox = new THREE.Box3().setFromObject(playerMesh);
+            pBox.expandByScalar(-0.1); // Margen de gracia
+            
+            for(let obj of gameObjects) {
+                if(obj.isVirtualLimit && playerMesh.position.z <= obj.z) return endGame("Fin del nivel");
+                
+                if(!obj.isVirtualLimit) {
+                    const oBox = new THREE.Box3().setFromObject(obj);
+                    
+                    if(pBox.intersectsBox(oBox)) {
+                        if(obj.userData.type === 'm') {
+                            if(isHost) broadcast({type: 'GAMEOVER', id: 'El Host'});
+                            else hostConnection.send({type: 'GAMEOVER'});
+                            return endGame("¡Llegaste a la meta!");
+                        }
+                        else if(obj.userData.type === 's') { die(); } 
+                        else if(obj.userData.type === 'b') {
+                            // Aterrizar encima del bloque
+                            if(playerVelocity.y < 0 && playerMesh.position.y > obj.position.y + 0.4) {
+                                playerMesh.position.y = obj.position.y + 1;
+                                isGrounded = true; playerVelocity.y = 0;
+                            } else {
+                                die(); // Chocar de frente
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function die() {
+            playerMesh.position.set(0, 0.5, 0); // Reiniciar pos
+            playerVelocity.y = 0;
+        }
+
+        function endGame(msg) {
+            gameActive = false;
+            bgAudio.pause(); bgAudio.currentTime = 0;
+            setTimeout(() => {
+                alert(msg);
+                document.getElementById('gameUI').classList.add('hidden');
+                showScreen('menuScreen');
+                disconnectAndLeave();
+            }, 500);
+        }
+
+        // Gestionar a los demás jugadores
+        function syncOtherPlayer(id, z, y, color) {
+            if(!otherPlayers[id]) {
+                const mat = new THREE.MeshBasicMaterial({ color: color || 0xff00ff, wireframe: true, transparent: true, opacity: 0.5 });
+                otherPlayers[id] = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
+                scene.add(otherPlayers[id]);
+            }
+            otherPlayers[id].position.set(0, y, z);
+        }
+        function removePlayerMesh(id) {
+            if(otherPlayers[id]) {
+                scene.remove(otherPlayers[id]);
+                delete otherPlayers[id];
+            }
+        }
+
+        function animate() {
+            if(!gameActive) return;
+            requestAnimationFrame(animate);
+
+            // Físicas locales
+            playerVelocity.y += gravity;
+            playerMesh.position.y += playerVelocity.y;
+            playerMesh.position.z -= forwardSpeed;
+
+            if(playerMesh.position.y < 0.5) {
+                playerMesh.position.y = 0.5;
+                playerVelocity.y = 0; isGrounded = true;
+            }
+
+            checkCollisions();
+
+            // Cámara Orbital calculada con senos y cosenos
+            const radius = 6;
+            camera.position.x = playerMesh.position.x + Math.sin(camRotX) * radius;
+            camera.position.z = playerMesh.position.z + Math.cos(camRotX) * radius;
+            camera.position.y = playerMesh.position.y + 2 + camRotY * 5;
+            camera.lookAt(playerMesh.position);
+
+            // Red
+            const syncData = { type: 'SYNC', z: playerMesh.position.z, y: playerMesh.position.y, color: myColor };
+            if(isHost) broadcast(syncData, myId); // Host envía a todos
+            else if(hostConnection && hostConnection.open) hostConnection.send(syncData); // Cliente envía a Host
+
+            // Progreso simple (solo basado en Z si hay objetos)
+            if(gameObjects.length > 0) {
+                let firstMeta = gameObjects.find(o => o.userData && o.userData.isFinish);
+                let targetZ = firstMeta ? firstMeta.position.z : -100;
+                let prog = Math.max(0, Math.min(100, (playerMesh.position.z / targetZ) * 100));
+                document.getElementById('progressDisplay').innerText = Math.floor(prog) + "%";
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // --- SISTEMA DE REACCIONES ---
+        function sendReaction(emoji) {
+            showFloatingReaction(emoji);
+            const data = {type: 'REACTION', emoji: emoji};
+            if(isHost) broadcast(data, myId);
+            else if(hostConnection && hostConnection.open) hostConnection.send(data);
+        }
+
+        function showFloatingReaction(emoji) {
+            const container = document.getElementById('floatingReactions');
+            const el = document.createElement('div');
+            el.innerText = emoji; container.appendChild(el);
+            setTimeout(() => el.remove(), 2000);
+        }
+
+        window.addEventListener('resize', () => {
+            if(camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+    </script>
+</body>
+</html>
