@@ -26,8 +26,10 @@
         /* Game Area */
         #game-layout { display: flex; flex-wrap: wrap; width: 100%; justify-content: center; gap: 20px; position: relative; }
         #main-player { display: flex; flex-direction: column; align-items: center; }
+        .board-container { display: flex; gap: 15px; align-items: flex-start;}
         canvas { background-color: #000; border: 2px solid #8d99ae; border-radius: 4px; box-shadow: 0 0 10px rgba(0,0,0,0.5);}
         #tetris { height: 60vh; }
+        #next-piece { width: 80px; height: 80px; }
         
         /* Opponents */
         #opponents-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 600px; }
@@ -44,8 +46,8 @@
         .attack-btn:active { background: #a8202a !important; }
         
         /* Info */
-        .stats { margin-top: 10px; font-size: 16px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center;}
-        .trophy { color: gold; }
+        .stats { display: flex; flex-direction: column; gap: 10px; font-size: 16px; background: #2b2d42; padding: 15px; border-radius: 8px;}
+        .trophy { color: gold; font-weight: bold; }
         .charge-text { color: #0DFF72; font-weight: bold; }
         
         /* Overlays */
@@ -53,7 +55,9 @@
         #qr-code { background: white; padding: 10px; border-radius: 8px; margin: 10px auto; display: none; }
         .player-list { list-style: none; padding: 0; width: 100%; max-width: 300px;}
         .player-list li { background: #4a4e69; margin: 5px 0; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between;}
-        #sudden-death-msg { position: absolute; top: 30%; color: #e63946; font-size: 32px; font-weight: bold; text-shadow: 0 0 10px #000; display: none; z-index: 10; pointer-events: none;}
+        
+        /* Tutorial Box */
+        #tutorial-box { display: none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: #2a9d8f; padding: 20px; border-radius: 8px; z-index: 100; text-align: center; border: 3px solid #fff; width: 90%; max-width: 400px; box-shadow: 0 0 15px rgba(0,0,0,0.8);}
     </style>
 </head>
 <body>
@@ -63,17 +67,23 @@
         <div class="menu-box">
             <h3>Player Info</h3>
             <input type="text" id="player-name" placeholder="Enter your Name" maxlength="12">
-            <div class="stats"><span class="trophy">🏆 Trophies: <span id="menu-trophies">0</span></span></div>
+            <div style="margin-top: 10px;"><span class="trophy">🏆 Trophies: <span id="menu-trophies">0</span></span></div>
+        </div>
+
+        <div class="menu-box">
+            <h3>Game Modes</h3>
+            <button onclick="startSoloGame()" style="background: #e63946;">Play Solo</button>
+            <button onclick="startTutorial()" style="background: #2a9d8f;">How to Play (Tutorial)</button>
         </div>
 
         <div class="menu-box">
             <h3>Music Selection (Host Stream)</h3>
-            <label>Upload File (Required for music)</label>
+            <label>Upload File (Required for custom music)</label>
             <input type="file" id="audio-file" accept="audio/*" style="margin-top:10px;">
         </div>
 
         <div class="menu-box">
-            <h3>Multiplayer</h3>
+            <h3>Multiplayer PvP</h3>
             <button id="btn-create" onclick="createRoom()">Create Room (Host)</button>
             <hr style="border: 1px solid #444; margin: 15px 0;">
             <input type="text" id="room-id-input" placeholder="Enter Room ID">
@@ -97,14 +107,25 @@
 
     <div id="screen-game" class="screen">
         <div id="game-layout">
-            <div id="sudden-death-msg">SUDDEN DEATH!</div>
+            
+            <div id="tutorial-box">
+                <h3 id="tut-title" style="margin-top:0;">Tutorial Step</h3>
+                <p id="tut-msg"></p>
+                <button id="tut-btn" onclick="advanceTutorial()">Next</button>
+            </div>
+
             <div id="main-player">
-                <canvas id="tetris" width="240" height="400"></canvas>
-                <div class="stats">
-                    <div>Score: <span id="score">0</span></div>
-                    <div class="charge-text">Charge: <span id="charge">0</span></div>
-                    <div>Target: <span id="current-target-name" style="color:#e63946">None</span></div>
+                <div class="board-container">
+                    <canvas id="tetris" width="240" height="400"></canvas>
+                    <div class="stats">
+                        <div>Next:</div>
+                        <canvas id="next-piece" width="80" height="80"></canvas>
+                        <div>Score: <span id="score">0</span></div>
+                        <div class="charge-text">Charge: <span id="charge">0</span></div>
+                        <div>Target: <span id="current-target-name" style="color:#e63946">None</span></div>
+                    </div>
                 </div>
+                
                 <div class="controls">
                     <button onclick="playerRotate(-1)">↺</button>
                     <button class="rotate" onclick="playerRotate(1)">↻</button>
@@ -125,7 +146,7 @@
         <h1 id="end-title">Game Over</h1>
         <h3 id="end-subtitle"></h3>
         <div class="menu-box">
-            <button id="btn-continue" onclick="continueToLobby()" style="display:none;">Continue (Host)</button>
+            <button id="btn-continue" onclick="continueToLobby()" style="display:none;">Continue</button>
             <button onclick="leaveRoom()">Exit to Menu</button>
         </div>
     </div>
@@ -136,6 +157,9 @@
         let connections = {}; 
         let hostConn = null;  
         let isHost = false;
+        let isSolo = false;
+        let isTutorial = false;
+        let tutorialStep = 0;
         let myId = '';
         let myName = '';
         let myTrophies = parseInt(localStorage.getItem('tetrisTrophies')) || 0;
@@ -146,7 +170,7 @@
 
         // Mechanics
         let attackCharge = 0;
-        let suddenDeathTimer = null;
+        let nextPieceMatrix = null;
 
         // Audio & Streaming
         let customAudio = null;
@@ -169,6 +193,10 @@
         const context = canvas.getContext('2d');
         context.scale(20, 20);
 
+        const nextCanvas = document.getElementById('next-piece');
+        const nextCtx = nextCanvas.getContext('2d');
+        nextCtx.scale(20, 20);
+
         const colors = [null, '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF', '#555555']; 
         let arena = createMatrix(12, 20);
         let player = { pos: {x: 0, y: 0}, matrix: null, score: 0 };
@@ -181,6 +209,11 @@
             const matrix = [];
             while (h--) matrix.push(new Array(w).fill(0));
             return matrix;
+        }
+
+        function createRandomPiece() {
+            const pieces = 'ILJOTSZ';
+            return pieces[pieces.length * Math.random() | 0];
         }
 
         function createPiece(type) {
@@ -202,6 +235,16 @@
             for (let id in playersData) {
                 if (id !== myId) drawOpponent(id);
             }
+        }
+
+        function drawNextPiece() {
+            nextCtx.fillStyle = '#000';
+            nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+            if (!nextPieceMatrix) return;
+            
+            const offsetX = nextPieceMatrix[0].length === 4 ? 0 : (nextPieceMatrix[0].length === 2 ? 1 : 0.5);
+            const offsetY = nextPieceMatrix.length === 2 ? 1 : 0.5;
+            drawMatrix(nextPieceMatrix, {x: offsetX, y: offsetY}, nextCtx);
         }
 
         function drawMatrix(matrix, offset, ctx, scale = 1) {
@@ -239,20 +282,24 @@
         }
 
         function playerReset() {
-            const pieces = 'ILJOTSZ';
-            player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
+            if (!nextPieceMatrix) nextPieceMatrix = createPiece(createRandomPiece());
+            player.matrix = nextPieceMatrix;
+            nextPieceMatrix = createPiece(createRandomPiece());
+            drawNextPiece();
+
             player.pos.y = 0;
             player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
             
             if (collide(arena, player)) {
                 arena.forEach(row => row.fill(0));
-                playersData[myId].alive = false;
-                sendNetworkMessage({ type: 'DIED', id: myId });
-                showEndScreen(false); // Mostrar derrota a mí mismo
                 
-                // FIXED BUG: If the host dies, we still need to check if someone else won
-                if (isHost) {
-                    checkWinCondition();
+                if (isSolo || isTutorial) {
+                    showEndScreen(false);
+                } else {
+                    playersData[myId].alive = false;
+                    sendNetworkMessage({ type: 'DIED', id: myId });
+                    showEndScreen(false); 
+                    if (isHost) checkWinCondition();
                 }
             }
             broadcastBoard();
@@ -278,7 +325,10 @@
         }
 
         function triggerAttack() {
-            if(gameState !== 'PLAYING' || !playersData[myId].alive) return;
+            if(gameState !== 'PLAYING') return;
+            
+            if (isTutorial && tutorialStep === 8) advanceTutorial();
+
             if (attackCharge > 0 && targetId && playersData[targetId] && playersData[targetId].alive) {
                 sendNetworkMessage({ 
                     type: 'GARBAGE', 
@@ -291,7 +341,7 @@
         }
 
         function receiveGarbage(lines) {
-            if(gameState !== 'PLAYING' || !playersData[myId].alive) return;
+            if(gameState !== 'PLAYING' || (playersData[myId] && !playersData[myId].alive)) return;
             for (let i = 0; i < lines; i++) {
                 arena.shift(); 
                 let newRow = new Array(12).fill(8); 
@@ -302,7 +352,7 @@
         }
 
         function playerDrop() {
-            if(gameState !== 'PLAYING' || !playersData[myId].alive) return;
+            if(gameState !== 'PLAYING') return;
             player.pos.y++;
             if (collide(arena, player)) {
                 player.pos.y--;
@@ -313,9 +363,11 @@
             dropCounter = 0;
         }
 
-        // Hard Drop Logic
         function playerHardDrop() {
-            if(gameState !== 'PLAYING' || !playersData[myId].alive) return;
+            if(gameState !== 'PLAYING') return;
+            
+            if (isTutorial && tutorialStep === 4) advanceTutorial();
+
             while (!collide(arena, player)) {
                 player.pos.y++;
             }
@@ -327,13 +379,19 @@
         }
 
         function playerMove(dir) {
-            if(gameState !== 'PLAYING' || !playersData[myId].alive) return;
+            if(gameState !== 'PLAYING') return;
+            
+            if (isTutorial && tutorialStep === 2) advanceTutorial();
+
             player.pos.x += dir;
             if (collide(arena, player)) player.pos.x -= dir;
         }
 
         function playerRotate(dir) {
-            if(gameState !== 'PLAYING' || !playersData[myId].alive) return;
+            if(gameState !== 'PLAYING') return;
+            
+            if (isTutorial && tutorialStep === 3) advanceTutorial();
+
             const pos = player.pos.x;
             let offset = 1;
             rotate(player.matrix, dir);
@@ -363,14 +421,14 @@
             const deltaTime = time - lastTime;
             lastTime = time;
             dropCounter += deltaTime;
-            if (dropCounter > dropInterval && playersData[myId] && playersData[myId].alive) {
+            if (dropCounter > dropInterval) {
                 playerDrop();
             }
             draw();
             animationId = requestAnimationFrame(update);
         }
 
-        // --- MULTIPLAYER LOGIC ---
+        // --- MULTIPLAYER & SOLO LOGIC ---
 
         function switchScreen(screenName) {
             Object.values(screens).forEach(s => s.classList.remove('active'));
@@ -384,6 +442,7 @@
         }
 
         function setupAudioCalls() {
+            if(!peer) return;
             peer.on('call', call => {
                 call.answer(); 
                 call.on('stream', remoteStream => {
@@ -400,6 +459,8 @@
 
         function createRoom() {
             initPlayerInfo();
+            isSolo = false;
+            isTutorial = false;
             statusTxt.innerText = "Creating room...";
             document.getElementById('btn-create').disabled = true;
             
@@ -410,6 +471,8 @@
                 document.getElementById('room-id-display').innerText = id;
                 document.getElementById('btn-start').style.display = 'block';
                 document.getElementById('btn-continue').style.display = 'inline-block';
+                document.getElementById('btn-continue').innerText = 'Continue (Host)';
+                document.getElementById('btn-continue').onclick = continueToLobby;
                 
                 const qrContainer = document.getElementById('qr-code');
                 qrContainer.innerHTML = '';
@@ -439,17 +502,9 @@
                     setTimeout(() => conn.close(), 500);
                     return;
                 }
-
                 connections[conn.peer] = conn;
-                
-                conn.on('data', (data) => {
-                    handleNetworkData(data, conn.peer);
-                });
-                
-                conn.on('close', () => {
-                    delete connections[conn.peer];
-                    removePlayer(conn.peer);
-                });
+                conn.on('data', (data) => handleNetworkData(data, conn.peer));
+                conn.on('close', () => { delete connections[conn.peer]; removePlayer(conn.peer); });
             });
         }
 
@@ -457,6 +512,8 @@
             const roomId = document.getElementById('room-id-input').value.trim();
             if (!roomId) return alert("Enter a Room ID");
             initPlayerInfo();
+            isSolo = false;
+            isTutorial = false;
             statusTxt.innerText = "Connecting...";
             document.getElementById('btn-join').disabled = true;
 
@@ -464,7 +521,6 @@
             peer.on('open', (id) => {
                 isHost = false;
                 myId = id;
-                
                 setupAudioCalls();
                 hostConn = peer.connect(roomId);
                 
@@ -474,35 +530,127 @@
                     document.getElementById('btn-start').style.display = 'none';
                     document.getElementById('btn-continue').style.display = 'none';
                     switchScreen('lobby');
-                    
                     hostConn.send({ type: 'JOIN', id: myId, name: myName, trophies: myTrophies });
                 });
 
-                hostConn.on('data', (data) => {
-                    handleNetworkData(data, roomId);
-                });
-
-                hostConn.on('close', () => {
-                    alert("Host disconnected");
-                    leaveRoom();
-                });
+                hostConn.on('data', (data) => handleNetworkData(data, roomId));
+                hostConn.on('close', () => { alert("Host disconnected"); leaveRoom(); });
             });
         }
+
+        function startSoloGame() {
+            initPlayerInfo();
+            isHost = true;
+            isSolo = true;
+            isTutorial = false;
+            myId = 'solo';
+            
+            document.getElementById('btn-continue').innerText = 'Play Again (Solo)';
+            document.getElementById('btn-continue').onclick = startSoloGame;
+
+            playersData[myId] = { name: myName, trophies: myTrophies, alive: true, board: createMatrix(12, 20) };
+            
+            startLocalGame();
+        }
+
+        // --- TUTORIAL LOGIC ---
+        function startTutorial() {
+            initPlayerInfo();
+            isHost = true;
+            isSolo = true;
+            isTutorial = true;
+            myId = 'solo';
+            tutorialStep = 1;
+            
+            playersData[myId] = { name: myName, trophies: myTrophies, alive: true, board: createMatrix(12, 20) };
+            
+            document.getElementById('tutorial-box').style.display = 'block';
+            startLocalGame();
+            
+            // Slow down drops to practically pause it unless player hard drops
+            dropInterval = 999999;
+            updateTutorialUI();
+        }
+
+        function advanceTutorial() {
+            if (!isTutorial) return;
+            tutorialStep++;
+            updateTutorialUI();
+        }
+
+        function updateTutorialUI() {
+            const title = document.getElementById('tut-title');
+            const msg = document.getElementById('tut-msg');
+            const btn = document.getElementById('tut-btn');
+            
+            title.innerText = `Step ${tutorialStep}/10`;
+            btn.style.display = 'inline-block';
+            btn.innerText = 'Next';
+
+            switch(tutorialStep) {
+                case 1:
+                    msg.innerText = "Welcome to Tetris Showdown! Let's learn the basics.";
+                    break;
+                case 2:
+                    msg.innerText = "Use the Left (←) or Right (→) buttons below to move your piece.";
+                    btn.style.display = 'none'; // Wait for user action
+                    break;
+                case 3:
+                    msg.innerText = "Great! Now press the Rotate buttons (↺ or ↻) to rotate the piece.";
+                    btn.style.display = 'none';
+                    break;
+                case 4:
+                    msg.innerText = "Awesome. Now press the Down arrow (⬇️) to Hard Drop the piece to the floor instantly.";
+                    btn.style.display = 'none';
+                    break;
+                case 5:
+                    msg.innerText = "Look at the 'Next' box above your score to plan your moves ahead of time!";
+                    break;
+                case 6:
+                    msg.innerText = "Clearing lines gives you Attack Charge. I've given you some Charge now!";
+                    attackCharge = 5;
+                    document.getElementById('charge').innerText = attackCharge;
+                    break;
+                case 7:
+                    msg.innerText = "In Multiplayer, you can target opponents. Click the 'Target' button under the dummy opponent.";
+                    btn.style.display = 'none';
+                    // Inject mock opponent
+                    playersData['dummy'] = { name: "Dummy Player", trophies: 0, alive: true, board: createMatrix(12, 20) };
+                    setupOpponentViews();
+                    break;
+                case 8:
+                    msg.innerText = "Now click the Red Swords (⚔️) button to attack and send your Charge as garbage lines!";
+                    btn.style.display = 'none';
+                    break;
+                case 9:
+                    msg.innerText = "Garbage lines push blocks up. If your blocks touch the top of the board, you lose!";
+                    break;
+                case 10:
+                    msg.innerText = "You're ready! Be the last one standing in PvP or get a high score in Solo. Good luck!";
+                    btn.innerText = 'Finish';
+                    btn.onclick = () => {
+                        document.getElementById('tutorial-box').style.display = 'none';
+                        leaveRoom();
+                    };
+                    break;
+            }
+        }
+
 
         function addPlayerToLobby(id, name, trophies) {
             playersData[id] = { name, trophies, alive: true, board: createMatrix(12, 20) };
             updateLobbyUI();
-            if (isHost) broadcastLobbyState();
+            if (isHost && !isSolo) broadcastLobbyState();
         }
 
         function removePlayer(id) {
             delete playersData[id];
             updateLobbyUI();
             if(gameState === 'PLAYING') {
-                checkWinCondition();
+                if(!isSolo) checkWinCondition();
                 setupOpponentViews(); 
             }
-            if (isHost) broadcastLobbyState();
+            if (isHost && !isSolo) broadcastLobbyState();
         }
 
         function updateLobbyUI() {
@@ -516,12 +664,13 @@
                 list.appendChild(li);
             }
             document.getElementById('player-count').innerText = count;
-            if (isHost) {
+            if (isHost && !isSolo) {
                 document.getElementById('btn-start').disabled = count < 2; 
             }
         }
 
         function sendNetworkMessage(msg) {
+            if (isSolo || isTutorial) return; // Ignore networking in Solo/Tutorial
             if (isHost) {
                 if (msg.type === 'GARBAGE') {
                     if (msg.target === myId) receiveGarbage(msg.lines);
@@ -569,9 +718,6 @@
                 case 'GAME_OVER':
                     showEndScreen(data.winnerId === myId, data.winnerName);
                     break;
-                case 'SUDDEN_DEATH':
-                    triggerSuddenDeath();
-                    break;
                 case 'CONTINUE':
                     switchScreen('lobby');
                     gameState = 'LOBBY';
@@ -584,37 +730,31 @@
         }
 
         function broadcastLobbyState() {
-            sendNetworkMessage({ type: 'LOBBY_STATE', players: playersData });
+            if (!isSolo) sendNetworkMessage({ type: 'LOBBY_STATE', players: playersData });
         }
 
         function broadcastBoard(id = myId, matrix = arena) {
-            sendNetworkMessage({ type: 'BOARD', id, matrix });
+            if (!isSolo) sendNetworkMessage({ type: 'BOARD', id, matrix });
         }
 
         // --- GAME FLOW ---
 
         function startGame() {
-            if (!isHost) return;
+            if (!isHost || isSolo) return;
             sendNetworkMessage({ type: 'START' });
-            
-            if (suddenDeathTimer) clearTimeout(suddenDeathTimer);
-            suddenDeathTimer = setTimeout(() => {
-                triggerSuddenDeath();
-                sendNetworkMessage({ type: 'SUDDEN_DEATH' });
-            }, 8 * 60 * 1000); 
-
             startLocalGame();
         }
 
         function startLocalGame() {
             gameState = 'PLAYING';
             arena = createMatrix(12, 20);
+            nextPieceMatrix = null;
             player.score = 0;
             attackCharge = 0;
-            dropInterval = 1000; 
+            dropInterval = isTutorial ? 999999 : 1000; 
+            
             document.getElementById('score').innerText = 0;
             document.getElementById('charge').innerText = 0;
-            document.getElementById('sudden-death-msg').style.display = 'none';
             
             for(let id in playersData) {
                 playersData[id].alive = true;
@@ -627,17 +767,6 @@
             switchScreen('game');
             lastTime = performance.now();
             update();
-        }
-
-        function triggerSuddenDeath() {
-            dropInterval = 500; 
-            if (isHost && customAudio) {
-                customAudio.playbackRate = 2.0; 
-            }
-            
-            const msg = document.getElementById('sudden-death-msg');
-            msg.style.display = 'block';
-            setTimeout(() => msg.style.display = 'none', 3000);
         }
 
         function setupOpponentViews() {
@@ -661,7 +790,7 @@
                 ctx.scale(10, 10);
                 playersData[id].ctx = ctx;
 
-                if (!targetId) setTarget(id); 
+                if (!targetId && !isTutorial) setTarget(id); 
             }
         }
 
@@ -680,6 +809,10 @@
         }
 
         function setTarget(id) {
+            if (isTutorial && tutorialStep === 7 && id === 'dummy') {
+                advanceTutorial();
+            }
+
             if(targetId) {
                 let oldBtn = document.getElementById(`btn-${targetId}`);
                 if(oldBtn) oldBtn.classList.remove('selected');
@@ -704,7 +837,7 @@
         }
 
         function checkWinCondition() {
-            if (!isHost) return;
+            if (!isHost || isSolo || isTutorial) return;
             let alivePlayers = [];
             for (let id in playersData) {
                 if (playersData[id].alive) alivePlayers.push(id);
@@ -715,10 +848,6 @@
                 let winnerName = winnerId ? playersData[winnerId].name : 'No one';
                 
                 sendNetworkMessage({ type: 'GAME_OVER', winnerId, winnerName });
-                
-                // Si el host no ha muerto ya (o si es el ganador), muestra la pantalla final.
-                // Si ya había muerto, la pantalla se mostró en playerReset(). Sin embargo, llamarlo
-                // aquí de nuevo actualiza correctamente el nombre del ganador en la pantalla.
                 showEndScreen(winnerId === myId, winnerName);
             }
         }
@@ -726,23 +855,35 @@
         function showEndScreen(isWinner, winnerName) {
             gameState = 'END';
             cancelAnimationFrame(animationId);
-            if (suddenDeathTimer) clearTimeout(suddenDeathTimer);
             stopMusic();
             
             const title = document.getElementById('end-title');
             const sub = document.getElementById('end-subtitle');
+            const continueBtn = document.getElementById('btn-continue');
             
-            if (isWinner) {
-                title.innerText = "VICTORY!";
-                title.style.color = "#0DFF72";
-                sub.innerText = "You are the last player standing.";
-                myTrophies += 1;
-                localStorage.setItem('tetrisTrophies', myTrophies);
-                document.getElementById('menu-trophies').innerText = myTrophies;
-            } else {
-                title.innerText = "DEFEAT";
+            if (isSolo) {
+                title.innerText = "GAME OVER";
                 title.style.color = "#FF0D72";
-                sub.innerText = winnerName ? `${winnerName} won the match.` : "You have been eliminated.";
+                sub.innerText = `Final Score: ${player.score}`;
+                continueBtn.style.display = 'inline-block';
+            } else if (isTutorial) {
+                // Tutorial doesn't use standard end screen, but just in case
+                leaveRoom();
+                return;
+            } else {
+                if (isWinner) {
+                    title.innerText = "VICTORY!";
+                    title.style.color = "#0DFF72";
+                    sub.innerText = "You are the last player standing.";
+                    myTrophies += 1;
+                    localStorage.setItem('tetrisTrophies', myTrophies);
+                    document.getElementById('menu-trophies').innerText = myTrophies;
+                } else {
+                    title.innerText = "DEFEAT";
+                    title.style.color = "#FF0D72";
+                    sub.innerText = winnerName ? `${winnerName} won the match.` : "You have been eliminated.";
+                }
+                if (isHost) continueBtn.style.display = 'inline-block';
             }
             
             switchScreen('end');
@@ -761,11 +902,11 @@
             connections = {};
             hostConn = null;
             playersData = {};
-            if (suddenDeathTimer) clearTimeout(suddenDeathTimer);
             stopMusic();
             document.getElementById('btn-create').disabled = false;
             document.getElementById('btn-join').disabled = false;
             statusTxt.innerText = "";
+            document.getElementById('tutorial-box').style.display = 'none';
             switchScreen('menu');
             gameState = 'MENU';
         }
@@ -774,7 +915,7 @@
         function startMusicAndStream() {
             stopMusic();
             
-            if (isHost) {
+            if (isHost || isSolo) {
                 const fileInput = document.getElementById('audio-file');
                 if (fileInput.files.length > 0) {
                     const url = URL.createObjectURL(fileInput.files[0]);
@@ -783,11 +924,14 @@
                     customAudio.volume = 0.5;
                     
                     customAudio.play().then(() => {
-                        const captureFunc = customAudio.captureStream || customAudio.mozCaptureStream;
-                        if (captureFunc) {
-                            myAudioStream = captureFunc.call(customAudio);
-                            for (let id in connections) {
-                                peer.call(id, myAudioStream);
+                        // Only stream if in a peer multiplayer room
+                        if (peer && !isSolo) {
+                            const captureFunc = customAudio.captureStream || customAudio.mozCaptureStream;
+                            if (captureFunc) {
+                                myAudioStream = captureFunc.call(customAudio);
+                                for (let id in connections) {
+                                    peer.call(id, myAudioStream);
+                                }
                             }
                         }
                     }).catch(e => console.log("Audio play blocked", e));
