@@ -20,7 +20,7 @@
             margin: 0;
             padding: 20px;
         }
-        .container { width: 100%; max-width: 800px; text-align: center; }
+        .container { width: 100%; max-width: 800px; text-align: center; position: relative; }
         .hidden { display: none !important; }
         
         /* Menú y Lobby */
@@ -86,14 +86,35 @@
             padding: 10px;
             margin-top: 20px;
         }
+
+        /* Tutorial Modal */
+        #tutorial-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            max-width: 400px;
+            width: 90%;
+            border-color: cyan;
+            box-shadow: 0 0 20px cyan;
+        }
+        #tutorial-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 999;
+        }
     </style>
 </head>
 <body>
+
+<audio id="bg-music" loop></audio>
 
 <div id="profile-badge">🏆 Trofeos: <span id="trophy-count">0</span></div>
 
 <div class="container">
     <h1>> HACK THE CODE _</h1>
+
+    <button onclick="openTutorial()" style="margin-bottom: 15px; border-color: cyan; color: cyan;">📖 ¿Cómo jugar?</button>
 
     <div id="menu" class="card">
         <input type="text" id="username" placeholder="Tu nombre de Hacker">
@@ -106,6 +127,17 @@
 
     <div id="lobby" class="card hidden">
         <h3>SALA: <span id="display-id" style="color: white; user-select: all;"></span></h3>
+        
+        <div id="qr-container" style="margin: 15px 0;"></div>
+
+        <div id="host-controls" class="hidden" style="margin: 15px 0; border: 1px dashed gray; padding: 10px;">
+            <p>🎵 Host: Elegir Música (Opcional)</p>
+            <input type="file" id="music-file" accept="audio/*" class="hidden">
+            <button onclick="document.getElementById('music-file').click()">Subir MP3/WAV</button>
+            <br><span id="music-name" style="font-size: 0.8em; color: gray;">Ninguna</span>
+        </div>
+        <p id="client-music-status" style="color: cyan; font-size: 0.8em;"></p>
+
         <p>Tu Código (6 números): 
             <input type="password" id="my-secret-code" maxlength="6" pattern="\d{6}" placeholder="123456" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
         </p>
@@ -134,7 +166,79 @@
     </div>
 </div>
 
+<div id="tutorial-overlay" class="hidden"></div>
+<div id="tutorial-modal" class="card hidden">
+    <h3 style="color: cyan;">TUTORIAL (<span id="tut-step">1</span>/8)</h3>
+    <p id="tut-text" style="min-height: 60px;">Bienvenido a Hack the Code, el juego donde tu mente es tu mejor arma.</p>
+    <button onclick="nextTutorial()">Siguiente</button>
+    <button onclick="closeTutorial()" style="border-color: red; color: red;">Cerrar</button>
+</div>
+
 <script>
+    // --- MOTOR SFX (WEB AUDIO API) ---
+    let audioCtx;
+    function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+    function playTone(freq, type, duration, vol=0.1) {
+        try {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        } catch(e) {}
+    }
+    function sfxClick() { initAudio(); playTone(600, 'sine', 0.1, 0.05); }
+    function sfxHack() { initAudio(); playTone(400, 'sawtooth', 0.15, 0.05); }
+    function sfxHit() { initAudio(); playTone(1000, 'sine', 0.1, 0.1); setTimeout(()=>playTone(1500, 'sine', 0.2, 0.1), 100); }
+    function sfxMiss() { initAudio(); playTone(200, 'sawtooth', 0.3, 0.1); }
+    function sfxEliminated() { initAudio(); playTone(300, 'square', 0.5, 0.1); setTimeout(()=>playTone(200, 'square', 0.5, 0.1), 250); }
+    function sfxWin() { initAudio(); [523, 659, 783, 1046].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.3, 0.1), i*150)); }
+
+    // Interceptar clics para sonido de botones
+    document.addEventListener('click', (e) => { if(e.target.tagName === 'BUTTON') sfxClick(); });
+
+    // --- LÓGICA DEL TUTORIAL ---
+    const tutSteps = [
+        "Bienvenido a Hack the Code, el juego donde tu mente es tu mejor arma.",
+        "El objetivo es descubrir y hackear los códigos secretos de tus rivales antes de que ellos descubran el tuyo.",
+        "Para empezar, crea una partida como 'Host' o únete con un 'ID de Sala'.",
+        "Una vez en la sala, elige tu código secreto de 6 dígitos. ¡No se lo digas a nadie!",
+        "Cuando todos estén listos, comenzará el juego. Verás a tus rivales en pantalla.",
+        "Escribe un código de 6 dígitos en el panel de un rival y presiona 'HACKEAR'.",
+        "Recibirás feedback: '✅' significa número correcto en la posición correcta. '❌' significa incorrecto.",
+        "Usa la lógica para descifrar sus códigos. ¡El último hacker en pie gana!"
+    ];
+    let currentTutStep = 0;
+    function openTutorial() {
+        currentTutStep = 0;
+        document.getElementById('tutorial-modal').classList.remove('hidden');
+        document.getElementById('tutorial-overlay').classList.remove('hidden');
+        updateTutorial();
+    }
+    function nextTutorial() {
+        currentTutStep++;
+        if(currentTutStep >= tutSteps.length) closeTutorial();
+        else updateTutorial();
+    }
+    function updateTutorial() {
+        document.getElementById('tut-step').innerText = currentTutStep + 1;
+        document.getElementById('tut-text').innerText = tutSteps[currentTutStep];
+    }
+    function closeTutorial() {
+        document.getElementById('tutorial-modal').classList.add('hidden');
+        document.getElementById('tutorial-overlay').classList.add('hidden');
+    }
+
+    // --- VARIABLES DE JUEGO ---
     let peer;
     let conn; 
     let connections = []; 
@@ -143,8 +247,26 @@
     let myData = { name: '', code: '', ready: false, eliminated: false };
     let players = [];
     let trophies = parseInt(localStorage.getItem('hackTheCode_trophies')) || 0;
+    
+    // Música compartida
+    let sharedMusicData = null;
+    let sharedMusicName = "";
 
     document.getElementById('trophy-count').innerText = trophies;
+
+    // Lector de música (Solo Host)
+    document.getElementById('music-file').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+        document.getElementById('music-name').innerText = file.name;
+        sharedMusicName = file.name;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            sharedMusicData = evt.target.result;
+            broadcast({ type: 'MUSIC', data: sharedMusicData, name: sharedMusicName });
+        };
+        reader.readAsDataURL(file);
+    });
 
     // --- LÓGICA DE CONEXIÓN ---
 
@@ -159,6 +281,9 @@
         peer.on('open', (id) => {
             myId = id;
             document.getElementById('display-id').innerText = id;
+            // Generar QR
+            document.getElementById('qr-container').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${id}&color=00ff41&bgcolor=000" alt="QR Code Sala">`;
+            document.getElementById('host-controls').classList.remove('hidden');
             showLobby();
             addOrUpdatePlayer({ id: myId, name: myData.name, ready: false, eliminated: false });
         });
@@ -173,6 +298,10 @@
             c.on('data', (data) => handleData(data, c));
             c.on('open', () => {
                 connections.push(c);
+                // Si el Host ya subió música, enviarla al nuevo jugador
+                if (sharedMusicData) {
+                    c.send({ type: 'MUSIC', data: sharedMusicData, name: sharedMusicName });
+                }
             });
             c.on('close', () => {
                 players = players.filter(p => p.id !== c.peer);
@@ -236,6 +365,10 @@
                 players = data.list;
                 updatePlayerListUI();
                 break;
+            case 'MUSIC':
+                document.getElementById('bg-music').src = data.data;
+                document.getElementById('client-music-status').innerText = "🎵 Canción del Host lista: " + data.name;
+                break;
             case 'READY': 
                 let p = players.find(player => player.id === data.id);
                 if (p) {
@@ -250,13 +383,49 @@
                 runGameStart();
                 break;
             case 'GUESS':
-                checkGuess(data);
+                // Aquí llega el ataque y verificamos el código
+                if (data.to === myId) {
+                    let resultArr = [];
+                    let isCorrect = true;
+                    for (let i = 0; i < 6; i++) {
+                        if (data.val[i] === myData.code[i]) { resultArr.push('✅'); } 
+                        else { resultArr.push('❌'); isCorrect = false; }
+                    }
+
+                    // Enviar respuesta al atacante
+                    let feedbackData = { type: 'GUESS_RESULT', from: myId, to: data.from, guess: data.val, result: resultArr };
+                    
+                    if (isHost) {
+                        let attackerConn = connections.find(c => c.peer === data.from);
+                        if (attackerConn) attackerConn.send(feedbackData);
+                    } else {
+                        conn.send(feedbackData);
+                    }
+
+                    if (isCorrect && !myData.eliminated) {
+                        sfxEliminated();
+                        alert("¡CRÍTICO! Han descifrado tu código. Has sido eliminado.");
+                        myData.eliminated = true;
+                        if (isHost) {
+                            markEliminated(myId);
+                            broadcast({ type: 'ELIMINATED', playerId: myId });
+                            checkWinCondition();
+                        } else {
+                            conn.send({ type: 'ELIMINATED', playerId: myId });
+                        }
+                    }
+                } else if (isHost) { 
+                    // El Host simplemente rutea la petición al jugador atacado
+                    let targetConn = connections.find(c => c.peer === data.to);
+                    if (targetConn) targetConn.send(data);
+                }
                 break;
-            case 'GUESS_RESULT': // NUEVO: Recibir los resultados del hackeo
+            case 'GUESS_RESULT':
+                // Recibir los resultados de mi propio ataque
                 if (data.to === myId) {
                     handleFeedback(data);
                 } else if (isHost) {
-                    // El host reenvía el resultado al atacante correspondiente
+                    // El Host rutea el resultado de vuelta al atacante
                     let attackerConn = connections.find(c => c.peer === data.to);
                     if (attackerConn) attackerConn.send(data);
                 }
@@ -315,6 +484,7 @@
     // --- LÓGICA DEL JUEGO ---
 
     function runGameStart() {
+        initAudio(); // Inicializar contexto de audio al interactuar
         document.getElementById('lobby').classList.add('hidden');
         document.getElementById('game-screen').classList.remove('hidden');
         document.getElementById('chat-container').classList.remove('hidden');
@@ -322,6 +492,12 @@
         document.getElementById('show-my-code').innerText = myData.code;
         myData.eliminated = false;
         
+        // Iniciar música si hay
+        const bgAudio = document.getElementById('bg-music');
+        if(bgAudio.src && bgAudio.src !== window.location.href) {
+            bgAudio.play().catch(e => console.log("Audio prevent by browser", e));
+        }
+
         renderRivals();
     }
 
@@ -343,6 +519,7 @@
     }
 
     function sendGuess(targetId) {
+        sfxHack();
         if (myData.eliminated) return alert("Estás eliminado, no puedes hackear.");
         
         const guessInput = document.getElementById(`guess-${targetId}`);
@@ -351,64 +528,27 @@
         if (guess.length !== 6) return alert("Debes intentar con 6 números.");
 
         if (isHost) {
-            checkGuess({ from: myId, to: targetId, val: guess });
+            // Host envía su ataque al cliente objetivo usando network para que fluya correctamente
+            let targetConn = connections.find(c => c.peer === targetId);
+            if (targetConn) targetConn.send({ type: 'GUESS', from: myId, to: targetId, val: guess });
         } else {
             conn.send({ type: 'GUESS', from: myId, to: targetId, val: guess });
         }
         guessInput.value = '';
     }
 
-    function checkGuess(data) {
-        if (data.to === myId) {
-            // Evaluamos el código dígito por dígito
-            let resultArr = [];
-            let isCorrect = true;
-            for (let i = 0; i < 6; i++) {
-                if (data.val[i] === myData.code[i]) {
-                    resultArr.push('✅');
-                } else {
-                    resultArr.push('❌');
-                    isCorrect = false;
-                }
-            }
-
-            // Enviar la tabla de resultados de vuelta al atacante
-            let feedbackData = { type: 'GUESS_RESULT', from: myId, to: data.from, guess: data.val, result: resultArr };
-            
-            if (isHost) {
-                let attackerConn = connections.find(c => c.peer === data.from);
-                if (attackerConn) attackerConn.send(feedbackData);
-            } else {
-                conn.send(feedbackData);
-            }
-
-            // Si acertó todo, te elimina
-            if (isCorrect && !myData.eliminated) {
-                alert("¡CRÍTICO! Han descifrado tu código. Has sido eliminado.");
-                myData.eliminated = true;
-                if (isHost) {
-                    markEliminated(myId);
-                    broadcast({ type: 'ELIMINATED', playerId: myId });
-                    checkWinCondition();
-                } else {
-                    conn.send({ type: 'ELIMINATED', playerId: myId });
-                }
-            }
-        } else if (isHost) { 
-            let targetConn = connections.find(c => c.peer === data.to);
-            if (targetConn) targetConn.send(data);
-        }
-    }
-
-    // NUEVO: Función para mostrar la tabla de resultados en pantalla
     function handleFeedback(data) {
+        // Reproducir efecto sonoro según el acierto
+        if (data.result.includes('✅')) sfxHit();
+        else sfxMiss();
+
         const feedbackDiv = document.getElementById(`feedback-${data.from}`);
         if (feedbackDiv) {
             let row = document.createElement('div');
             row.className = 'feedback-row';
             row.innerText = `${data.guess} ➔ ${data.result.join('')}`;
             feedbackDiv.appendChild(row);
-            feedbackDiv.scrollTop = feedbackDiv.scrollHeight; // Auto-scroll hacia abajo
+            feedbackDiv.scrollTop = feedbackDiv.scrollHeight; 
         }
     }
 
@@ -444,6 +584,9 @@
     }
 
     function showVictory(winnerId, winnerName) {
+        document.getElementById('bg-music').pause(); // Detener música
+        sfxWin(); // Sonido de victoria
+
         document.getElementById('game-screen').classList.add('hidden');
         document.getElementById('victory-screen').classList.remove('hidden');
         
