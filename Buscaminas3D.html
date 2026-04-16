@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Buscaminas 3D</title>
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-red: #ff003c;
+            --neon-green: #00ff66;
+            --neon-yellow: #fffb00;
+            --bg-color: #0b0b1a;
+        }
+        
+        * { box-sizing: border-box; font-family: 'Courier New', Courier, monospace; user-select: none; }
+        
+        body {
+            background-color: var(--bg-color);
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        h1, h2, h3 {
+            text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
+            text-align: center;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+        }
+        .screen.active { display: flex; }
+
+        input, .neon-btn {
+            background: transparent;
+            border: 2px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 1.2rem;
+            border-radius: 5px;
+            outline: none;
+            box-shadow: 0 0 10px var(--neon-blue) inset, 0 0 10px var(--neon-blue);
+            text-align: center;
+        }
+        
+        .neon-btn { cursor: pointer; transition: 0.2s; }
+        .neon-btn:hover { background: var(--neon-blue); color: #000; box-shadow: 0 0 20px var(--neon-blue) inset, 0 0 20px var(--neon-blue); }
+        .neon-btn.red { border-color: var(--neon-red); color: var(--neon-red); box-shadow: 0 0 10px var(--neon-red) inset, 0 0 10px var(--neon-red); }
+        .neon-btn.red:hover { background: var(--neon-red); color: #fff; }
+
+        /* Controles de dificultad */
+        .slider-container { margin: 20px 0; text-align: center; }
+        input[type="range"] { accent-color: var(--neon-blue); width: 200px; }
+
+        /* UI del Juego */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 600px;
+            padding: 10px;
+            border-bottom: 2px solid var(--neon-blue);
+            box-shadow: 0 5px 10px rgba(0, 243, 255, 0.2);
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            text-shadow: 0 0 5px var(--neon-blue);
+        }
+
+        /* Tablero */
+        .board-container {
+            flex-grow: 1;
+            width: 100%;
+            overflow: auto; /* Permite scroll top-down */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 4px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--neon-blue);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+            transform: perspective(800px) rotateX(10deg); /* Ligero efecto 3D Top-Down */
+        }
+
+        .cell {
+            width: 35px;
+            height: 35px;
+            background: #1a1a2e;
+            border: 1px solid var(--neon-blue);
+            box-shadow: 0 0 5px var(--neon-blue) inset;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+
+        .cell:active { transform: scale(0.9); }
+        
+        .cell.revealed {
+            background: #0f0f1a;
+            border-color: #333;
+            box-shadow: none;
+            color: #fff;
+        }
+
+        .cell.bomb-preview {
+            background: var(--neon-red);
+            box-shadow: 0 0 15px var(--neon-red);
+        }
+
+        .cell.flag {
+            background: var(--neon-yellow);
+            box-shadow: 0 0 15px var(--neon-yellow) inset;
+        }
+
+        /* Overlay de Mensajes */
+        #msg-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        #msg-text { font-size: 3rem; margin-bottom: 20px; }
+
+    </style>
+</head>
+<body>
+
+    <div id="screen-nickname" class="screen active">
+        <h1>Buscaminas 3D</h1>
+        <input type="text" id="nickname" placeholder="Tu Nickname" maxlength="15">
+        <button class="neon-btn" onclick="saveNickname()">Continuar</button>
+    </div>
+
+    <div id="screen-menu" class="screen">
+        <h1 id="welcome-text"></h1>
+        <button class="neon-btn" onclick="changeNickname()">Cambiar Nickname</button>
+        
+        <div class="slider-container">
+            <p>Dificultad (Capas Y): <span id="diff-val" style="color:var(--neon-blue)">0</span> / 11</p>
+            <input type="range" id="difficulty" min="0" max="11" value="0" oninput="document.getElementById('diff-val').innerText = this.value">
+        </div>
+
+        <button class="neon-btn" onclick="startSinglePlayer()">Modo Solo</button>
+        <button class="neon-btn" style="border-color:var(--neon-green); color:var(--neon-green);" onclick="showLobby()">Multiplayer Co-op</button>
+    </div>
+
+    <div id="screen-lobby" class="screen">
+        <h2>Lobby Co-op</h2>
+        <p>Tu ID para invitar:</p>
+        <h3 id="my-peer-id" style="user-select: text; word-break: break-all;">Conectando...</h3>
+        
+        <div style="margin-top: 30px;">
+            <input type="text" id="join-id" placeholder="ID del Host">
+            <button class="neon-btn" onclick="joinPeer()">Unirse</button>
+        </div>
+        <button class="neon-btn red" onclick="goBackToMenu()" style="margin-top: 40px;">Volver</button>
+    </div>
+
+    <div id="screen-game" class="screen">
+        <div class="game-header">
+            <div id="ui-lives" style="color:var(--neon-red); text-shadow:0 0 5px var(--neon-red);">Vidas: 3</div>
+            <div id="ui-layer">Capa Z: 1/1</div>
+            <div id="ui-players">Jugadores: 1</div>
+        </div>
+        <div class="board-container">
+            <div id="grid" class="grid"></div>
+        </div>
+    </div>
+
+    <div id="msg-overlay">
+        <div id="msg-text" class="neon-text"></div>
+        <button class="neon-btn" onclick="goBackToMenu()">Salir al Menú</button>
+    </div>
+
+<script>
+    /* =========================================
+       SISTEMA DE AUDIO (SFX SINTETIZADOS)
+    ========================================= */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playTone(freq, type, duration, vol=0.1) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    const sfx = {
+        click: () => playTone(600, 'sine', 0.1),
+        flag: () => playTone(900, 'triangle', 0.1),
+        bomb: () => { playTone(150, 'sawtooth', 0.5, 0.3); playTone(100, 'square', 0.5, 0.3); },
+        layerClear: () => { playTone(400, 'sine', 0.1); setTimeout(() => playTone(600, 'sine', 0.3), 100); },
+        gameOver: () => { playTone(200, 'sawtooth', 1); setTimeout(() => playTone(150, 'sawtooth', 1.5), 200); },
+        win: () => { playTone(500, 'square', 0.2); setTimeout(() => playTone(700, 'square', 0.4), 200); setTimeout(() => playTone(1000, 'square', 0.6), 400); }
+    };
+
+    /* =========================================
+       VARIABLES GLOBALES & ESTADO
+    ========================================= */
+    let nickname = localStorage.getItem('nickname') || '';
+    const GRID_SIZE = 12;
+    let maxLayers = 1;
+    
+    // Estado del juego (El Host tiene la autoridad)
+    let state = {
+        grid: [],
+        lives: 3,
+        currentLayer: 1,
+        safeCellsRevealed: 0,
+        totalSafeCells: 0,
+        isPlaying: false,
+        isPreview: false
+    };
+
+    // Variables Multiplayer
+    let peer = null;
+    let conn = null;
+    let isMultiplayer = false;
+    let isHost = true; 
+
+    /* =========================================
+       NAVEGACIÓN DE PANTALLAS
+    ========================================= */
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    if (nickname) { showMenu(); }
+
+    function saveNickname() {
+        const val = document.getElementById('nickname').value.trim();
+        if (val) { nickname = val; localStorage.setItem('nickname', nickname); showMenu(); sfx.click(); }
+    }
+
+    function changeNickname() { showScreen('screen-nickname'); document.getElementById('nickname').value = nickname; sfx.click(); }
+
+    function showMenu() {
+        document.getElementById('welcome-text').innerText = `¡Bienvenido, ${nickname}!`;
+        showScreen('screen-menu');
+    }
+
+    function showMessage(text, color) {
+        const overlay = document.getElementById('msg-overlay');
+        const msgText = document.getElementById('msg-text');
+        msgText.innerText = text;
+        msgText.style.color = color;
+        msgText.style.textShadow = `0 0 20px ${color}`;
+        overlay.style.display = 'flex';
+    }
+
+    function hideMessage() { document.getElementById('msg-overlay').style.display = 'none'; }
+
+    function goBackToMenu() {
+        hideMessage();
+        if(conn) { conn.close(); conn = null; }
+        if(peer) { peer.destroy(); peer = null; }
+        showMenu();
+        sfx.click();
+    }
+
+    /* =========================================
+       LÓGICA PEERJS (MULTIPLAYER)
+    ========================================= */
+    function showLobby() {
+        sfx.click();
+        isMultiplayer = true;
+        isHost = true;
+        showScreen('screen-lobby');
+        initPeer();
+    }
+
+    function initPeer() {
+        if(peer) peer.destroy();
+        peer = new Peer();
+        peer.on('open', id => { document.getElementById('my-peer-id').innerText = id; });
+        peer.on('connection', connection => {
+            conn = connection;
+            setupConnection();
+            // Host arranca el juego al conectarse un cliente
+            maxLayers = parseInt(document.getElementById('difficulty').value) + 1;
+            startGame(); 
+        });
+    }
+
+    function joinPeer() {
+        const hostId = document.getElementById('join-id').value.trim();
+        if(!hostId) return;
+        sfx.click();
+        isHost = false;
+        conn = peer.connect(hostId);
+        setupConnection();
+    }
+
+    function setupConnection() {
+        conn.on('open', () => {
+            if(!isHost) { showScreen('screen-game'); document.getElementById('ui-players').innerText = "Jugadores: 2"; }
+            else { document.getElementById('ui-players').innerText = "Jugadores: 2"; }
+        });
+
+        conn.on('data', data => {
+            // El Host recibe clics del cliente
+            if (isHost && state.isPlaying && !state.isPreview) {
+                if (data.type === 'REVEAL') handleReveal(data.r, data.c);
+                if (data.type === 'FLAG') handleFlag(data.r, data.c);
+            }
+            // El Cliente recibe actualizaciones de estado del Host
+            if (!isHost) {
+                if (data.type === 'UPDATE') {
+                    state = data.state;
+                    renderBoard();
+                    updateUI();
+                }
+                if (data.type === 'SFX') sfx[data.sound]();
+                if (data.type === 'MSG') showMessage(data.msg, data.color);
+            }
+        });
+
+        conn.on('close', () => { alert("Conexión perdida."); goBackToMenu(); });
+    }
+
+    function broadcastState() {
+        if (isHost && conn && conn.open) {
+            conn.send({ type: 'UPDATE', state: state });
+        }
+    }
+
+    function broadcastSfx(soundName) {
+        if (isHost && conn && conn.open) conn.send({ type: 'SFX', sound: soundName });
+    }
+
+    function broadcastMsg(msg, color) {
+        if (isHost && conn && conn.open) conn.send({ type: 'MSG', msg, color });
+    }
+
+    /* =========================================
+       LÓGICA DEL JUEGO HOST / SINGLEPLAYER
+    ========================================= */
+    function startSinglePlayer() {
+        sfx.click();
+        isMultiplayer = false;
+        isHost = true;
+        conn = null;
+        if(peer) { peer.destroy(); peer = null; }
+        maxLayers = parseInt(document.getElementById('difficulty').value) + 1;
+        document.getElementById('ui-players').innerText = "Jugadores: 1";
+        startGame();
+    }
+
+    function startGame() {
+        showScreen('screen-game');
+        state.lives = 3;
+        state.currentLayer = 1;
+        state.isPlaying = true;
+        initLayer();
+    }
+
+    function initLayer() {
+        state.grid = [];
+        state.safeCellsRevealed = 0;
+        state.totalSafeCells = 0;
+        
+        // Dificultad escala cantidad de bombas según la capa
+        const bombCount = 15 + (state.currentLayer * 2);
+
+        // Generar matriz limpia
+        for(let r=0; r<GRID_SIZE; r++) {
+            let row = [];
+            for(let c=0; c<GRID_SIZE; c++) {
+                row.push({ isBomb: false, isRevealed: false, isFlagged: false, neighborBombs: 0 });
+            }
+            state.grid.push(row);
+        }
+
+        // Colocar bombas
+        let bombsPlaced = 0;
+        while(bombsPlaced < bombCount) {
+            let r = Math.floor(Math.random() * GRID_SIZE);
+            let c = Math.floor(Math.random() * GRID_SIZE);
+            if(!state.grid[r][c].isBomb) {
+                state.grid[r][c].isBomb = true;
+                bombsPlaced++;
+            }
+        }
+
+        // Calcular números y celdas seguras
+        for(let r=0; r<GRID_SIZE; r++) {
+            for(let c=0; c<GRID_SIZE; c++) {
+                if(!state.grid[r][c].isBomb) {
+                    state.totalSafeCells++;
+                    state.grid[r][c].neighborBombs = countNeighbors(r, c);
+                }
+            }
+        }
+
+        updateUI();
+        triggerPreview();
+    }
+
+    function countNeighbors(r, c) {
+        let count = 0;
+        for(let i=-1; i<=1; i++) {
+            for(let j=-1; j<=1; j++) {
+                if(r+i>=0 && r+i<GRID_SIZE && c+j>=0 && c+j<GRID_SIZE) {
+                    if(state.grid[r+i][c+j].isBomb) count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    function triggerPreview() {
+        state.isPreview = true;
+        renderBoard();
+        broadcastState();
+        
+        let timer = 3;
+        const msgText = document.getElementById('ui-layer');
+        
+        const interval = setInterval(() => {
+            msgText.innerText = `Memoriza... ${timer}s`;
+            timer--;
+            if(timer < 0) {
+                clearInterval(interval);
+                state.isPreview = false;
+                updateUI();
+                renderBoard();
+                broadcastState();
+            }
+        }, 1000);
+    }
+
+    /* =========================================
+       INTERACCIONES & REGLAS (HOST AUTHORITY)
+    ========================================= */
+    function userClick(r, c) {
+        if(state.isPreview || !state.isPlaying) return;
+        
+        if(!isHost) {
+            conn.send({ type: 'REVEAL', r, c });
+            return;
+        }
+        handleReveal(r, c);
+    }
+
+    function userFlag(r, c) {
+        if(state.isPreview || !state.isPlaying) return;
+        
+        if(!isHost) {
+            conn.send({ type: 'FLAG', r, c });
+            return;
+        }
+        handleFlag(r, c);
+    }
+
+    function handleFlag(r, c) {
+        const cell = state.grid[r][c];
+        if(!cell.isRevealed) {
+            cell.isFlagged = !cell.isFlagged;
+            sfx.flag(); broadcastSfx('flag');
+            renderBoard();
+            broadcastState();
+        }
+    }
+
+    function handleReveal(r, c) {
+        const cell = state.grid[r][c];
+        if(cell.isRevealed || cell.isFlagged) return;
+
+        cell.isRevealed = true;
+
+        if(cell.isBomb) {
+            state.lives--;
+            sfx.bomb(); broadcastSfx('bomb');
+            if(state.lives <= 0) {
+                loseGame();
+            } else {
+                renderBoard(); updateUI(); broadcastState();
+            }
+            return;
+        }
+
+        sfx.click(); broadcastSfx('click');
+        state.safeCellsRevealed++;
+
+        // Cascada de 0s
+        if(cell.neighborBombs === 0) {
+            floodFill(r, c);
+        }
+
+        checkWinLayer();
+        renderBoard();
+        updateUI();
+        broadcastState();
+    }
+
+    function floodFill(r, c) {
+        for(let i=-1; i<=1; i++) {
+            for(let j=-1; j<=1; j++) {
+                let nr = r+i, nc = c+j;
+                if(nr>=0 && nr<GRID_SIZE && nc>=0 && nc<GRID_SIZE) {
+                    let nCell = state.grid[nr][nc];
+                    if(!nCell.isRevealed && !nCell.isBomb && !nCell.isFlagged) {
+                        nCell.isRevealed = true;
+                        state.safeCellsRevealed++;
+                        if(nCell.neighborBombs === 0) floodFill(nr, nc);
+                    }
+                }
+            }
+        }
+    }
+
+    function checkWinLayer() {
+        if(state.safeCellsRevealed === state.totalSafeCells) {
+            if(state.currentLayer < maxLayers) {
+                sfx.layerClear(); broadcastSfx('layerClear');
+                state.currentLayer++;
+                initLayer(); // Reinicia la grid y llama a triggerPreview
+            } else {
+                winGame();
+            }
+        }
+    }
+
+    function loseGame() {
+        state.isPlaying = false;
+        sfx.gameOver(); broadcastSfx('gameOver');
+        showMessage("¡Fin del Juego!", "var(--neon-red)");
+        broadcastMsg("¡Fin del Juego!", "var(--neon-red)");
+        // Revelar todas las bombas
+        state.grid.forEach(row => row.forEach(c => { if(c.isBomb) c.isRevealed = true; }));
+        renderBoard(); broadcastState();
+    }
+
+    function winGame() {
+        state.isPlaying = false;
+        sfx.win(); broadcastSfx('win');
+        showMessage("¡Misión Completada!", "var(--neon-green)");
+        broadcastMsg("¡Misión Completada!", "var(--neon-green)");
+        renderBoard(); broadcastState();
+    }
+
+    /* =========================================
+       RENDERIZADO (DOM)
+    ========================================= */
+    function updateUI() {
+        document.getElementById('ui-lives').innerText = `Vidas: ${state.lives}`;
+        document.getElementById('ui-layer').innerText = `Capa Y: ${state.currentLayer}/${maxLayers}`;
+    }
+
+    function renderBoard() {
+        const gridEl = document.getElementById('grid');
+        gridEl.innerHTML = '';
+
+        for(let r=0; r<GRID_SIZE; r++) {
+            for(let c=0; c<GRID_SIZE; c++) {
+                const cellData = state.grid[r][c];
+                const div = document.createElement('div');
+                div.classList.add('cell');
+
+                // Lógica de visualización
+                if(state.isPreview && cellData.isBomb) {
+                    div.classList.add('bomb-preview');
+                } else if(cellData.isRevealed) {
+                    div.classList.add('revealed');
+                    if(cellData.isBomb) {
+                        div.innerText = '💣';
+                        div.style.background = 'var(--neon-red)';
+                    } else if(cellData.neighborBombs > 0) {
+                        div.innerText = cellData.neighborBombs;
+                        const colors = ['#0ff', '#0f0', '#ff0', '#f00', '#f0f', '#0ff', '#fff', '#fff'];
+                        div.style.color = colors[cellData.neighborBombs - 1];
+                        div.style.textShadow = `0 0 5px ${div.style.color}`;
+                    }
+                } else if(cellData.isFlagged) {
+                    div.classList.add('flag');
+                }
+
+                // Eventos Desktop
+                div.addEventListener('click', (e) => userClick(r, c));
+                div.addEventListener('contextmenu', (e) => { e.preventDefault(); userFlag(r, c); });
+                
+                // Eventos Mobile (Long press para bandera)
+                let touchTimer;
+                div.addEventListener('touchstart', (e) => {
+                    touchTimer = setTimeout(() => { userFlag(r,c); touchTimer = null; }, 500);
+                });
+                div.addEventListener('touchend', () => { if(touchTimer) clearTimeout(touchTimer); });
+                div.addEventListener('touchmove', () => { if(touchTimer) clearTimeout(touchTimer); });
+
+                gridEl.appendChild(div);
+            }
+        }
+    }
+</script>
+</body>
+</html>
