@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Carrera Multijugador</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            background: #222;
+            color: white;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        #menu, #game-over {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .track {
+            height: 25vh;
+            border-bottom: 2px dashed #555;
+            display: flex;
+            align-items: center;
+            position: relative;
+            background: #333;
+        }
+        .car {
+            width: 60px;
+            height: 40px;
+            position: absolute;
+            left: 10px;
+            transition: left 0.1s linear;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            border-radius: 5px;
+        }
+        .finish-line {
+            position: absolute;
+            right: 20px;
+            width: 10px;
+            height: 100%;
+            background: repeating-linear-gradient(white, white 10px, black 10px, black 20px);
+        }
+        .controls {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+        }
+        .btn {
+            padding: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+        }
+        #btn-p1 { background: #ff4757; }
+        #btn-p2 { background: #2ed573; }
+        #btn-p3 { background: #1e90ff; }
+        #btn-p4 { background: #ffa502; }
+        
+        #win-msg { font-size: 2rem; margin-bottom: 20px; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="menu">
+        <h1>CARRERA LOCA</h1>
+        <p>Selecciona cuántos jugadores:</p>
+        <div>
+            <button onclick="startGame(2)">2 Jugadores</button>
+            <button onclick="startGame(3)">3 Jugadores</button>
+            <button onclick="startGame(4)">4 Jugadores</button>
+        </div>
+    </div>
+
+    <div id="game-over" class="hidden">
+        <div id="win-msg"></div>
+        <button onclick="location.reload()" style="padding: 15px 30px; font-size: 20px;">Reiniciar</button>
+    </div>
+
+    <div id="game-container"></div>
+
+    <div id="controls-container" class="controls hidden"></div>
+
+    <audio id="bgMusic">
+        <source src="https://actions.google.com/sounds/v1/science_fiction/low_fuzz_hum.ogg" type="audio/ogg">
+    </audio>
+
+    <script>
+        const container = document.getElementById('game-container');
+        const controls = document.getElementById('controls-container');
+        const music = document.getElementById('bgMusic');
+        let players = [];
+        let gameActive = false;
+        const goal = window.innerWidth - 80;
+
+        function startGame(num) {
+            document.getElementById('menu').classList.add('hidden');
+            controls.classList.remove('hidden');
+            music.play(); // Inicia la música
+
+            const colors = ['#ff4757', '#2ed573', '#1e90ff', '#ffa502'];
+            const emojis = ['🏎️', '🏎️', '🏎️', '🏎️'];
+
+            for (let i = 0; i < num; i++) {
+                // Crear carril
+                const track = document.createElement('div');
+                track.className = 'track';
+                track.style.height = (90 / num) + 'vh';
+                
+                const finish = document.createElement('div');
+                finish.className = 'finish-line';
+                
+                const car = document.createElement('div');
+                car.className = 'car';
+                car.id = `car-${i}`;
+                car.style.backgroundColor = colors[i];
+                car.innerHTML = emojis[i];
+                
+                track.appendChild(finish);
+                track.appendChild(car);
+                container.appendChild(track);
+
+                // Crear botón
+                const btn = document.createElement('button');
+                btn.className = 'btn';
+                btn.id = `btn-p${i+1}`;
+                btn.innerText = `P${i+1}`;
+                btn.ontouchstart = (e) => { e.preventDefault(); move(i); };
+                btn.onclick = () => move(i);
+                controls.appendChild(btn);
+
+                players.push({ pos: 10 });
+            }
+            gameActive = true;
+        }
+
+        function move(index) {
+            if (!gameActive) return;
+
+            players[index].pos += 15; // Velocidad por toque
+            const carElement = document.getElementById(`car-${index}`);
+            carElement.style.left = players[index].pos + 'px';
+
+            if (players[index].pos >= goal) {
+                endGame(index + 1);
+            }
+        }
+
+        function endGame(winner) {
+            gameActive = false;
+            music.pause(); // Detener música al terminar
+            const overScreen = document.getElementById('game-over');
+            const msg = document.getElementById('win-msg');
+            overScreen.classList.remove('hidden');
+            msg.innerText = `¡EL JUGADOR ${winner} GANA! 🏆`;
+        }
+    </script>
+</body>
+</html>

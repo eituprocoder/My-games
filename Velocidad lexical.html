@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reto de Escritura Rápida</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --text: #f8fafc;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        #game-container {
+            text-align: center;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+        }
+        .word-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: var(--primary);
+            text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+        input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2rem;
+            border-radius: 10px;
+            border: 2px solid var(--primary);
+            background: #1e293b;
+            color: white;
+            outline: none;
+            box-sizing: border-box;
+        }
+        #timer-bar {
+            width: 100%;
+            height: 10px;
+            background: #334155;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        #progress {
+            width: 100%;
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.1s linear;
+        }
+        .stats { margin-top: 20px; font-size: 1.1rem; }
+        #start-btn {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <h1>¡Escribe Rápido!</h1>
+    <div id="game-ui" style="display: none;">
+        <div class="word-display" id="target-word">Cargando...</div>
+        <input type="text" id="user-input" autocomplete="off" placeholder="Escribe aquí...">
+        <div id="timer-bar"><div id="progress"></div></div>
+        <div class="stats">Puntos: <span id="score">0</span></div>
+    </div>
+    <button id="start-btn">EMPEZAR JUEGO</button>
+</div>
+
+<script>
+    const words = ["CASA", "TECLADO", "MOVIL", "PROGRAMA", "VELOZ", "FUTURO", "CODIGO", "MUSICA", "ESTRELLA", "PIZZA", "LOGICA", "PANTALLA"];
+    let score = 0;
+    let timeLeft = 100;
+    let currentWord = "";
+    let gameInterval;
+    let timerInterval;
+
+    const startBtn = document.getElementById('start-btn');
+    const gameUi = document.getElementById('game-ui');
+    const wordDisplay = document.getElementById('target-word');
+    const userInput = document.getElementById('user-input');
+    const scoreDisplay = document.getElementById('score');
+    const progress = document.getElementById('progress');
+
+    // Función para "música/sonido" usando la API de Audio del navegador
+    function playTone(freq, type = 'sine') {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+    }
+
+    function nextWord() {
+        currentWord = words[Math.floor(Math.random() * words.length)];
+        wordDisplay.innerText = currentWord;
+        userInput.value = "";
+        timeLeft = 100;
+    }
+
+    function gameOver() {
+        clearInterval(timerInterval);
+        playTone(150, 'sawtooth');
+        alert("¡Tiempo agotado! Puntuación final: " + score);
+        location.reload();
+    }
+
+    startBtn.addEventListener('click', () => {
+        startBtn.style.display = 'none';
+        gameUi.style.display = 'block';
+        userInput.focus();
+        nextWord();
+
+        // Bucle del temporizador
+        timerInterval = setInterval(() => {
+            timeLeft -= 2; // Velocidad del juego
+            progress.style.width = timeLeft + "%";
+            if (timeLeft <= 0) gameOver();
+        }, 100);
+    });
+
+    userInput.addEventListener('input', () => {
+        if (userInput.value.toUpperCase() === currentWord) {
+            score++;
+            scoreDisplay.innerText = score;
+            playTone(440 + (score * 20)); // Sonido sube de tono
+            nextWord();
+        }
+    });
+</script>
+
+</body>
+</html>

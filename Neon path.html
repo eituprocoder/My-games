@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Path Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #gameCanvas {
+            display: block;
+            margin: 0 auto;
+            background: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+        }
+        .score { font-size: 24px; font-weight: bold; color: #0ff; }
+        #msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border: 2px solid #0ff;
+            border-radius: 15px;
+        }
+        button {
+            background: #0ff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div class="score">Puntos: <span id="points">0</span></div>
+    </div>
+
+    <div id="msg">
+        <h1>NEON PATH</h1>
+        <p>Mantén pulsado y arrastra para moverte.<br>¡Esquiva las barras rojas!</p>
+        <button onclick="startGame()">JUGAR</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('points');
+        const msgEl = document.getElementById('msg');
+
+        let player = { x: 0, y: 0, size: 15, color: '#0ff' };
+        let obstacles = [];
+        let score = 0;
+        let gameActive = false;
+        let speed = 4;
+
+        // Ajustar canvas al tamaño del móvil
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        function startGame() {
+            score = 0;
+            speed = 4;
+            obstacles = [];
+            player.x = canvas.width / 2;
+            player.y = canvas.height - 100;
+            gameActive = true;
+            msgEl.style.display = 'none';
+            scoreEl.innerText = score;
+            animate();
+        }
+
+        // Control táctil
+        window.addEventListener('touchmove', (e) => {
+            if (!gameActive) return;
+            let touch = e.touches[0];
+            player.x = touch.clientX;
+            player.y = touch.clientY - 20; // Un poco arriba del dedo para ver al personaje
+        });
+
+        function spawnObstacle() {
+            if (Math.random() < 0.05) {
+                let w = Math.random() * (canvas.width * 0.6) + 50;
+                obstacles.push({
+                    x: Math.random() * (canvas.width - w),
+                    y: -50,
+                    w: w,
+                    h: 20,
+                    color: `hsl(${Math.random() * 360}, 100%, 50%)`
+                });
+            }
+        }
+
+        function animate() {
+            if (!gameActive) return;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // Efecto estela
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Dibujar Jugador
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = player.color;
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Obstáculos
+            spawnObstacle();
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let o = obstacles[i];
+                o.y += speed;
+                
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = '#ff3344';
+                ctx.fillRect(o.x, o.y, o.w, o.h);
+
+                // Colisión simple
+                if (player.x > o.x && player.x < o.x + o.w &&
+                    player.y > o.y && player.y < o.y + o.h) {
+                    gameOver();
+                }
+
+                if (o.y > canvas.height) {
+                    obstacles.splice(i, 1);
+                    score++;
+                    scoreEl.innerText = score;
+                    speed += 0.05; // Aumenta dificultad
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            msgEl.style.display = 'block';
+            msgEl.innerHTML = `<h1>¡GAME OVER!</h1><p>Puntos: ${score}</p><button onclick="startGame()">REINTENTAR</button>`;
+        }
+    </script>
+</body>
+</html>

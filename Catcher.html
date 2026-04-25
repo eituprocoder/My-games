@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Retro Catch Mobile</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #1a1a2e;
+            font-family: 'Arial', sans-serif;
+            touch-action: none;
+        }
+        canvas {
+            display: block;
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+            pointer-events: none;
+        }
+        #msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #e94560;
+            font-size: 30px;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui">Puntos: 0 | Vidas: 3</div>
+    <div id="msg">¡GAME OVER!<br><span style="font-size: 15px; color: white;">Toca para reiniciar</span></div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const ui = document.getElementById('ui');
+        const msg = document.getElementById('msg');
+
+        // Configuración de pantalla
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let score = 0;
+        let lives = 3;
+        let gameActive = true;
+
+        // Jugador
+        const player = {
+            w: 80,
+            h: 15,
+            x: canvas.width / 2 - 40,
+            y: canvas.height - 50,
+            color: '#0f3460'
+        };
+
+        // Coleccionables
+        const items = [];
+        function createItem() {
+            items.push({
+                x: Math.random() * (canvas.width - 20),
+                y: -20,
+                r: 10,
+                speed: 3 + Math.random() * 3
+            });
+        }
+
+        // Música y Sonido (Web Audio API)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playTone(freq, type, duration) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function startMusic() {
+            // Un bucle simple de bajo
+            setInterval(() => {
+                if(gameActive) playTone(110, 'triangle', 0.5);
+            }, 500);
+        }
+
+        // Controles Táctiles
+        window.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            player.x = touch.clientX - player.w / 2;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            player.x = e.clientX - player.w / 2;
+        });
+
+        window.addEventListener('click', () => {
+            if (!gameActive) {
+                location.reload();
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+                startMusic();
+            }
+        });
+
+        function update() {
+            if (!gameActive) return;
+
+            if (Math.random() < 0.02) createItem();
+
+            items.forEach((item, index) => {
+                item.y += item.speed;
+
+                // Colisión con jugador
+                if (item.y + item.r > player.y && 
+                    item.x > player.x && 
+                    item.x < player.x + player.w) {
+                    items.splice(index, 1);
+                    score++;
+                    playTone(440, 'sine', 0.1);
+                    ui.innerHTML = `Puntos: ${score} | Vidas: ${lives}`;
+                }
+
+                // Fuera de pantalla
+                if (item.y > canvas.height) {
+                    items.splice(index, 1);
+                    lives--;
+                    playTone(150, 'sawtooth', 0.2);
+                    ui.innerHTML = `Puntos: ${score} | Vidas: ${lives}`;
+                    if (lives <= 0) {
+                        gameActive = false;
+                        msg.style.display = 'block';
+                    }
+                }
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Dibujar jugador
+            ctx.fillStyle = '#4ecca3';
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+
+            // Dibujar items
+            ctx.fillStyle = '#fdb827';
+            items.forEach(item => {
+                ctx.beginPath();
+                ctx.arc(item.x, item.y, item.r, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            requestAnimationFrame(() => {
+                update();
+                draw();
+            });
+        }
+
+        draw();
+    </script>
+</body>
+</html>

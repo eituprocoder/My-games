@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>YouTuber Tycoon</title>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #0f0f0f; color: #00ff00; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        #stats-panel { background: #1a1a1a; width: 100%; border: 2px solid #333; border-radius: 10px; padding: 10px; margin-bottom: 15px; box-sizing: border-box; }
+        .stat-line { display: flex; justify-content: space-between; margin: 5px 0; font-weight: bold; }
+        
+        .screen { width: 100%; height: 120px; background: #000; border: 3px solid #ff0000; position: relative; border-radius: 8px; margin-bottom: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; overflow: hidden; }
+        #progress { height: 100%; width: 0%; background: rgba(255,0,0,0.3); position: absolute; left: 0; transition: width 0.1s; }
+        
+        .actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { padding: 15px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; text-transform: uppercase; font-size: 0.8rem; }
+        .btn:active { transform: translateY(2px); filter: brightness(1.2); }
+        
+        .btn-video { background: #e62117; grid-column: span 2; }
+        .btn-stream { background: #9146ff; }
+        .btn-merch { background: #ff8c00; }
+        .btn-rest { background: #444; }
+        .btn-upgrade { background: #008080; }
+
+        #console { width: 100%; height: 60px; font-size: 0.8rem; background: #000; padding: 8px; border: 1px solid #333; margin-top: 10px; overflow-y: hidden; box-sizing: border-box; }
+        .income-passive { color: #ffd700; font-size: 0.8rem; text-align: center; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+    <div id="stats-panel">
+        <div class="stat-line"><span>SUBS:</span> <span id="subs">0</span></div>
+        <div class="stat-line"><span>DINERO:</span> <span id="money">$0</span></div>
+        <div class="stat-line"><span>ENERGÍA:</span> <span id="energy">100%</span></div>
+        <div class="income-passive" id="passive-info">Ingresos Pasivos: $0/seg</div>
+    </div>
+
+    <div class="screen">
+        <div id="progress"></div>
+        <div id="display-text" style="z-index: 1;">LISTO PARA EMITIR</div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-video" onclick="doAction('video')">📹 Grabar Video (-20 Ene)</button>
+        <button class="btn btn-stream" onclick="doAction('stream')">💜 Directo (-40 Ene)</button>
+        <button class="btn btn-merch" id="merch-btn" onclick="buyMerch()" style="display:none;">👕 Lanzar Merch ($200)</button>
+        <button class="btn btn-upgrade" onclick="buySponsor()">🤝 Sponsor ($100)</button>
+        <button class="btn btn-rest" onclick="rest()">😴 Descansar</button>
+    </div>
+
+    <div id="console">> Bienvenido, creador.</div>
+
+    <script>
+        let subs = 0, money = 0, energy = 100;
+        let passiveIncome = 0, multiplier = 1, sponsors = 0;
+        let audioCtx = null;
+
+        function playSound(f, type="square") {
+            if (!audioCtx) audioCtx = new AudioContext();
+            let osc = audioCtx.createOscillator();
+            let g = audioCtx.createGain();
+            osc.type = type; osc.frequency.value = f;
+            g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            osc.connect(g); g.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+        }
+
+        // Dinero pasivo cada segundo
+        setInterval(() => {
+            if (passiveIncome > 0) {
+                money += passiveIncome;
+                updateUI();
+            }
+        }, 1000);
+
+        function updateUI() {
+            document.getElementById('subs').innerText = Math.floor(subs).toLocaleString();
+            document.getElementById('money').innerText = "$" + Math.floor(money).toLocaleString();
+            document.getElementById('energy').innerText = energy + "%";
+            document.getElementById('passive-info').innerText = `Ingresos Pasivos: $${passiveIncome}/seg`;
+            
+            if (subs >= 500) document.getElementById('merch-btn').style.display = "block";
+        }
+
+        function log(msg) {
+            let c = document.getElementById('console');
+            c.innerText = "> " + msg;
+            playSound(200, "sine");
+        }
+
+        function doAction(type) {
+            let cost = type === 'video' ? 20 : 40;
+            if (energy < cost) return log("Sin energía...");
+
+            energy -= cost;
+            let bar = document.getElementById('progress');
+            let txt = document.getElementById('display-text');
+            txt.innerText = type === 'video' ? "EDITANDO..." : "EN VIVO...";
+            
+            let w = 0;
+            let timer = setInterval(() => {
+                w += 10;
+                bar.style.width = w + "%";
+                if (w >= 100) {
+                    clearInterval(timer);
+                    bar.style.width = "0%";
+                    txt.innerText = "¡EXITO!";
+                    completeAction(type);
+                }
+            }, 50);
+        }
+
+        function completeAction(type) {
+            let gain = type === 'video' ? (Math.random() * 20 + 5) : (Math.random() * 50 + 20);
+            gain *= multiplier;
+            subs += gain;
+            let cash = type === 'stream' ? (gain * 0.8) : (gain * 0.2);
+            money += cash;
+            log(`+${Math.floor(gain)} subs y +$${Math.floor(cash)}`);
+            playSound(600);
+            updateUI();
+        }
+
+        function buySponsor() {
+            if (money >= 100) {
+                money -= 100;
+                sponsors++;
+                passiveIncome += 2;
+                log("Sponsor firmado: +$2/seg");
+                playSound(800);
+                updateUI();
+            } else log("Necesitas $100");
+        }
+
+        function buyMerch() {
+            if (money >= 200) {
+                money -= 200;
+                passiveIncome += 10;
+                log("¡Camisetas lanzadas! +$10/seg");
+                document.getElementById('merch-btn').style.display = "none";
+                updateUI();
+            } else log("Necesitas $200");
+        }
+
+        function rest() {
+            energy = Math.min(100, energy + 40);
+            log("Dormiste un poco...");
+            playSound(300, "triangle");
+            updateUI();
+        }
+    </script>
+</body>
+</html>

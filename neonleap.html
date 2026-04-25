@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Leap Mobile</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0a0a0a;
+            font-family: 'Courier New', Courier, monospace;
+            touch-action: manipulation;
+        }
+        #gameCanvas {
+            display: block;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00ffcc;
+            font-size: 24px;
+            pointer-events: none;
+            text-shadow: 0 0 10px #00ffcc;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">Score: 0</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const ui = document.getElementById('ui');
+
+        // Ajuste de pantalla
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let score = 0;
+        let gameActive = true;
+
+        const player = {
+            x: 50,
+            y: canvas.height - 100,
+            size: 30,
+            color: '#ff00ff',
+            dy: 0,
+            jumpForce: 12,
+            gravity: 0.6,
+            grounded: false
+        };
+
+        const obstacles = [];
+        let obstacleTimer = 0;
+
+        function drawPlayer() {
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = player.color;
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.size, player.size);
+            ctx.shadowBlur = 0;
+        }
+
+        function createObstacle() {
+            const size = Math.random() * (50 - 20) + 20;
+            obstacles.push({
+                x: canvas.width,
+                y: canvas.height - size - 50,
+                width: size,
+                height: size,
+                speed: 5 + (score / 5),
+                color: '#00ffcc'
+            });
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Gravedad y suelo
+            player.dy += player.gravity;
+            player.y += player.dy;
+
+            if (player.y + player.size > canvas.height - 50) {
+                player.y = canvas.height - 50 - player.size;
+                player.dy = 0;
+                player.grounded = true;
+            }
+
+            // Suelo estético
+            ctx.strokeStyle = '#333';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height - 50);
+            ctx.lineTo(canvas.width, canvas.height - 50);
+            ctx.stroke();
+
+            // Obstáculos
+            obstacleTimer++;
+            if (obstacleTimer > Math.max(40, 100 - score)) {
+                createObstacle();
+                obstacleTimer = 0;
+            }
+
+            obstacles.forEach((obs, index) => {
+                obs.x -= obs.speed;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = obs.color;
+                ctx.fillStyle = obs.color;
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+
+                // Colisión
+                if (player.x < obs.x + obs.width &&
+                    player.x + player.size > obs.x &&
+                    player.y < obs.y + obs.height &&
+                    player.y + player.size > obs.y) {
+                    gameOver();
+                }
+
+                if (obs.x + obs.width < 0) {
+                    obstacles.splice(index, 1);
+                    score++;
+                    ui.innerHTML = `Score: ${score}`;
+                }
+            });
+
+            drawPlayer();
+            requestAnimationFrame(update);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            alert(`GAME OVER\nScore: ${score}\nToca para reiniciar`);
+            location.reload();
+        }
+
+        // Control Táctil
+        window.addEventListener('touchstart', () => {
+            if (player.grounded) {
+                player.dy = -player.jumpForce;
+                player.grounded = false;
+            }
+        });
+
+        // Iniciar
+        update();
+    </script>
+</body>
+</html>

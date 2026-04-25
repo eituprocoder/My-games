@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Jump Mobile</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0a0a0a;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            touch-action: none;
+        }
+        canvas {
+            border: 2px solid #00f2ff;
+            box-shadow: 0 0 20px #00f2ff;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        #ui {
+            position: absolute;
+            color: #00f2ff;
+            top: 20px;
+            font-size: 24px;
+            pointer-events: none;
+            text-shadow: 0 0 5px #00f2ff;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">Puntos: 0</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const ui = document.getElementById('ui');
+
+        // Ajuste de pantalla para móvil
+        canvas.width = window.innerWidth < 500 ? window.innerWidth - 20 : 400;
+        canvas.height = window.innerHeight < 700 ? window.innerHeight - 100 : 600;
+
+        let score = 0;
+        let gameActive = false;
+        let audioCtx = null;
+
+        // Jugador
+        const player = {
+            x: 50,
+            y: canvas.height / 2,
+            radius: 15,
+            velocity: 0,
+            gravity: 0.4,
+            jump: -7
+        };
+
+        // Obstáculos
+        const obstacles = [];
+        const gap = 150;
+
+        // Sonido Sintetizado (Retro-style)
+        function playNote(freq, type, duration) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function createObstacle() {
+            const height = Math.random() * (canvas.height - gap - 100) + 50;
+            obstacles.push({
+                x: canvas.width,
+                top: height,
+                bottom: canvas.height - height - gap,
+                width: 40,
+                passed: false
+            });
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            player.velocity += player.gravity;
+            player.y += player.velocity;
+
+            if (player.y + player.radius > canvas.height || player.y - player.radius < 0) {
+                gameOver();
+            }
+
+            if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 200) {
+                createObstacle();
+            }
+
+            obstacles.forEach((obs, index) => {
+                obs.x -= 3;
+
+                // Colisión
+                if (
+                    player.x + player.radius > obs.x &&
+                    player.x - player.radius < obs.x + obs.width &&
+                    (player.y - player.radius < obs.top || player.y + player.radius > canvas.height - obs.bottom)
+                ) {
+                    gameOver();
+                }
+
+                if (!obs.passed && obs.x + obs.width < player.x) {
+                    score++;
+                    obs.passed = true;
+                    ui.innerText = `Puntos: ${score}`;
+                    playNote(440 + (score * 10), 'square', 0.1);
+                }
+
+                if (obs.x + obs.width < 0) obstacles.splice(index, 1);
+            });
+        }
+
+        function draw() {
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Dibujar Jugador
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            ctx.strokeStyle = '#00f2ff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00f2ff';
+
+            // Dibujar Obstáculos
+            obstacles.forEach(obs => {
+                ctx.fillStyle = '#ff0055';
+                ctx.shadowColor = '#ff0055';
+                ctx.fillRect(obs.x, 0, obs.width, obs.top);
+                ctx.fillRect(obs.x, canvas.height - obs.bottom, obs.width, obs.bottom);
+            });
+
+            if (!gameActive) {
+                ctx.fillStyle = '#00f2ff';
+                ctx.shadowBlur = 0;
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('TOCA PARA EMPEZAR', canvas.width / 2, canvas.height / 2);
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            playNote(150, 'sawtooth', 0.5);
+            alert(`¡Game Over! Puntuación: ${score}`);
+            reset();
+        }
+
+        function reset() {
+            player.y = canvas.height / 2;
+            player.velocity = 0;
+            obstacles.length = 0;
+            score = 0;
+            ui.innerText = `Puntos: 0`;
+        }
+
+        // Input para móvil y desktop
+        window.addEventListener('touchstart', (e) => {
+            if (!gameActive) {
+                gameActive = true;
+                // Iniciar música de fondo básica
+                setInterval(() => { if(gameActive) playNote(110, 'sine', 0.5); }, 1000);
+            }
+            player.velocity = player.jump;
+            playNote(300, 'triangle', 0.1);
+        });
+
+        window.addEventListener('mousedown', () => {
+             // Simula el touch para PC
+             window.dispatchEvent(new Event('touchstart'));
+        });
+
+        loop();
+    </script>
+</body>
+</html>
