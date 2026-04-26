@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hack the Code - Ultimate Edition</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --hacker-green: #00ff41;
+            --dark-bg: #0d0d0d;
+            --gold: #ffd700;
+            --energy-color: #00e5ff;
+            --xp-color: #ff00ff;
+        }
+        body { background-color: var(--dark-bg); color: var(--hacker-green); font-family: 'Courier New', Courier, monospace; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; overflow-x: hidden; }
+        .container { width: 100%; max-width: 950px; text-align: center; position: relative; }
+        .hidden { display: none !important; }
+        
+        /* Menú y Lobby */
+        .card { border: 1px solid var(--hacker-green); padding: 20px; margin-bottom: 20px; box-shadow: 0 0 10px var(--hacker-green); background: #000; }
+        input, button { background: black; color: var(--hacker-green); border: 1px solid var(--hacker-green); padding: 10px; margin: 5px; font-family: inherit; }
+        button:hover { background: var(--hacker-green); color: black; cursor: pointer; }
+        button:disabled { border-color: gray; color: gray; cursor: not-allowed; background: #222; }
+
+        /* Perfil Superior */
+        #profile-badge { position: absolute; top: 10px; right: 10px; border: 1px solid var(--hacker-green); padding: 10px; font-weight: bold; display: flex; flex-direction: column; gap: 5px; background: rgba(0,0,0,0.9); z-index: 100; font-size: 0.85em; text-align: right;}
+        .profile-pic { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--hacker-green); object-fit: cover; vertical-align: middle; margin-right: 10px; }
+        .profile-pic-large { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--hacker-green); object-fit: cover; margin-bottom: 10px; }
+
+        /* Juego */
+        #rivals-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; }
+        .rival-card { border: 1px solid red; padding: 10px; display: flex; flex-direction: column; position: relative; }
+        .eliminated { opacity: 0.3; text-decoration: line-through; border-color: gray; pointer-events: none; }
+        .ready-text { color: yellow; font-size: 0.8em; }
+
+        /* Tienda Tabs */
+        .shop-tabs { display: flex; justify-content: center; gap: 5px; margin-bottom: 10px; }
+        .tab-btn { background: #111; color: var(--gold); border: 1px solid var(--gold); padding: 5px 10px; cursor: pointer; }
+        .tab-btn.active { background: var(--gold); color: black; }
+        
+        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 10px; }
+        .shop-item { border: 1px solid var(--gold); padding: 5px; font-size: 0.75em; cursor: pointer; transition: 0.3s; position: relative;}
+        .shop-item:hover { background: rgba(255, 215, 0, 0.2); }
+        .equipped-badge { position: absolute; top: 0; right: 0; background: cyan; color: black; font-size: 0.8em; padding: 2px; }
+
+        /* Energía y Barras */
+        #energy-container, #xp-container { margin: 5px 0; border: 1px solid var(--energy-color); width: 100%; height: 15px; position: relative; background: #111; }
+        #xp-container { border-color: var(--xp-color); margin-top: 10px; }
+        #energy-bar { background: var(--energy-color); height: 100%; width: 100%; transition: width 0.2s; }
+        #xp-bar { background: var(--xp-color); height: 100%; width: 0%; transition: width 0.2s; }
+        .bar-text { position: absolute; top: 0; left: 0; width: 100%; text-align: center; color: white; font-size: 0.8em; font-weight: bold; line-height: 15px;}
+
+        /* Inventario y Habilidades en Juego */
+        #inventory-bar, #abilities-bar, #mascots-bar { margin-top: 10px; padding: 10px; border-top: 1px dashed gray; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        .inv-slot { border: 1px solid cyan; padding: 5px; cursor: pointer; font-size: 0.7em; }
+        .ability-btn { border: 1px solid orange; color: orange; padding: 5px; cursor: pointer; font-size: 0.7em; }
+        .ability-btn.cooldown { opacity: 0.5; cursor: not-allowed; border-color: gray; color: gray; }
+        .mascot-display { border: 1px solid #bf00ff; padding: 5px; font-size: 0.7em; color: #bf00ff; }
+
+        /* Feedback y Chat */
+        .feedback-table { margin-top: 10px; background: #111; border: 1px dashed var(--hacker-green); padding: 5px; height: 80px; overflow-y: auto; font-size: 0.9em; text-align: center; }
+        .feedback-row { letter-spacing: 2px; margin-bottom: 3px; }
+        #chat-box { height: 120px; overflow-y: scroll; border: 1px solid var(--hacker-green); text-align: left; padding: 10px; margin-top: 20px; font-size: 0.8em; }
+
+        /* Modales */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999; }
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 2px solid cyan; box-shadow: 0 0 20px cyan; background: #000; padding: 20px; }
+        .achieve-card { border: 1px solid #444; padding: 10px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;}
+        .achieve-card.unlocked { border-color: gold; color: gold; }
+        .bp-tier { border: 1px dashed var(--xp-color); padding: 10px; margin-bottom: 5px; text-align: left; }
+        .bp-tier.claimed { opacity: 0.5; border-color: gray; }
+        .bp-tier.available { border: 1px solid cyan; box-shadow: 0 0 10px cyan; }
+    </style>
+</head>
+<body>
+
+<div id="profile-badge">
+    <div>🏆 Trofeos: <span id="trophy-count">0</span></div>
+    <div style="color: var(--gold);">💰 HC: <span id="crypto-count">500</span></div>
+    <div style="color: cyan;">⚙️ Huecos: <span id="slots-count">6</span></div>
+    <div style="color: var(--xp-color);">⭐ Nivel BP: <span id="bp-level-ui">1</span></div>
+</div>
+
+<div class="container">
+    <h1>> HACK THE CODE _</h1>
+
+    <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+        <button onclick="openTutorial()" style="border-color: cyan; color: cyan;">📖 Tutorial</button>
+        <button onclick="openBP()" style="border-color: var(--xp-color); color: var(--xp-color);">⭐ Pase de Batalla</button>
+        <button onclick="openAchievements()" style="border-color: gold; color: gold;">🏆 Logros</button>
+    </div>
+
+    <div id="menu" class="card">
+        <div id="photo-preview-container">
+            <img id="my-photo-preview" class="profile-pic-large" src="https://via.placeholder.com/80/000/00ff41?text=?" alt="Perfil">
+        </div>
+        <input type="file" id="profile-upload" accept="image/*" class="hidden" onchange="previewPhoto(this)">
+        <button onclick="document.getElementById('profile-upload').click()">Cargar Foto</button>
+        <br>
+        <input type="text" id="username" placeholder="Tu nombre de Hacker">
+        <br><br>
+        <button onclick="hostGame()">Crear Partida Privada</button>
+        <br>
+        <input type="text" id="join-id" placeholder="ID de la sala">
+        <button onclick="joinGame()">Unirse</button>
+        <br><br>
+        <button onclick="autoMatchmake()" style="border-color: orange; color: orange; font-weight: bold; width: 100%;">🌐 Buscar Sala Pública Automática</button>
+    </div>
+
+    <div id="lobby" class="card hidden">
+        <h3>SALA: <span id="display-id" style="color: white; user-select: all;"></span></h3>
+        <div id="qr-container" style="margin: 10px 0;"></div>
+
+        <div id="shop" style="margin: 15px 0; border: 1px solid var(--gold); padding: 10px;">
+            <h4 style="color: var(--gold); margin: 0 0 10px 0;">🛒 Mercado Negro</h4>
+            <div class="shop-tabs">
+                <button class="tab-btn active" onclick="switchTab('powers')">Power-ups</button>
+                <button class="tab-btn" onclick="switchTab('skills')">Habilidades Activas</button>
+                <button class="tab-btn" onclick="switchTab('mascots')">Mascotas IA</button>
+                <button class="tab-btn" onclick="switchTab('upgrades')">Mejoras</button>
+            </div>
+            <div id="shop-content" class="shop-grid"></div>
+        </div>
+
+        <p>Tu Código Secreto: 
+            <input type="password" id="my-secret-code" placeholder="Ingresa tu código" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+        </p>
+        <button id="ready-btn" onclick="toggleReady()">ESTOY LISTO</button>
+        
+        <div id="player-list" style="margin-top: 20px; text-align: left;"></div>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div class="card">
+            <h4>TU CÓDIGO: <span id="show-my-code" style="color: white;"></span></h4>
+            
+            <div id="energy-container">
+                <div id="energy-bar"></div>
+                <div id="energy-text" class="bar-text">ENERGÍA: 100/100</div>
+            </div>
+            
+            <div id="mascots-bar"></div>
+            <div id="abilities-bar"></div>
+            <div id="inventory-bar"></div>
+        </div>
+        <div id="rivals-list"></div>
+    </div>
+
+    <div id="victory-screen" class="card hidden" style="border-color: gold; box-shadow: 0 0 15px gold;">
+        <h2 id="victory-text" style="color: gold;"></h2>
+        <p id="reward-text" style="color: var(--gold);"></p>
+        
+        <div id="xp-container">
+            <div id="xp-bar"></div>
+            <div id="xp-text" class="bar-text">XP: 0/1000</div>
+        </div>
+
+        <button id="btn-play-again" class="hidden" onclick="playAgain()" style="margin-top: 15px;">Seguir jugando</button>
+        <button onclick="location.reload()" style="margin-top: 15px;">Salir al Menú</button>
+    </div>
+
+    <div id="chat-container" class="hidden" style="width: 100%;">
+        <div id="chat-box"></div>
+        <input type="text" id="chat-input" placeholder="Mensaje..." style="width: 75%;">
+        <button onclick="sendChatMessage()">Enviar</button>
+    </div>
+</div>
+
+<div id="tutorial-overlay" class="modal-overlay hidden"></div>
+<div id="tutorial-modal" class="modal hidden" style="border-color: cyan; box-shadow: 0 0 20px cyan;">
+    <h3 style="color: cyan;">TUTORIAL</h3>
+    <p id="tut-text">Bienvenido a HTC Ultimate. Descifra códigos. Usa energía sabiamente. Compra IAs que te asistan, usa habilidades recargables y sube tu Pase de Batalla.</p>
+    <button onclick="closeTutorial()">Entendido</button>
+</div>
+
+<div id="bp-overlay" class="modal-overlay hidden"></div>
+<div id="bp-modal" class="modal hidden" style="border-color: var(--xp-color); box-shadow: 0 0 20px var(--xp-color);">
+    <h3 style="color: var(--xp-color);">⭐ PASE DE BATALLA (Nivel <span id="bp-lvl-display">1</span>)</h3>
+    <p>Gana XP jugando (1000 XP = 1 Nivel). ¡Reclama recompensas!</p>
+    <div id="bp-tiers" style="max-height: 50vh; overflow-y: auto;"></div>
+    <button onclick="closeBP()">Cerrar</button>
+</div>
+
+<div id="achievements-overlay" class="modal-overlay hidden"></div>
+<div id="achievements-modal" class="modal hidden" style="border-color: gold; box-shadow: 0 0 20px gold;">
+    <h3 style="color: gold;">🏆 LOGROS HACKER</h3>
+    <div id="achievements-list" style="max-height: 50vh; overflow-y: auto;"></div>
+    <button onclick="closeAchievements()">Cerrar</button>
+</div>
+
+<script>
+    // ==========================================
+    // 1. BASES DE DATOS Y LOCALSTORAGE
+    // ==========================================
+    let trophies = parseInt(localStorage.getItem('htc_trophies')) || 0;
+    let crypto = parseInt(localStorage.getItem('htc_crypto')) || 500;
+    let mySlots = parseInt(localStorage.getItem('htc_slots')) || 6;
+    let xp = parseInt(localStorage.getItem('htc_xp')) || 0;
+    let bpLevel = parseInt(localStorage.getItem('htc_bpLevel')) || 1;
+    let claimedBP = JSON.parse(localStorage.getItem('htc_claimedBP')) || [];
+    
+    let myInventory = [];
+    let myAbilities = JSON.parse(localStorage.getItem('htc_abilities')) || []; // Habilidades compradas
+    let myMascots = JSON.parse(localStorage.getItem('htc_mascots')) || {};     // {id: nivel}
+    let equippedMascots = JSON.parse(localStorage.getItem('htc_eq_mascots')) || []; // max 3 ids
+    let achievementsData = JSON.parse(localStorage.getItem('htc_achievements')) || {}; 
+    
+    let stats = JSON.parse(localStorage.getItem('htc_stats')) || { gamesPlayed: 0, gamesWon: 0, noPowerupWins: 0 };
+
+    document.getElementById('trophy-count').innerText = trophies;
+    document.getElementById('crypto-count').innerText = crypto;
+    document.getElementById('slots-count').innerText = mySlots;
+    document.getElementById('bp-level-ui').innerText = bpLevel;
+    
+    const codeInput = document.getElementById('my-secret-code');
+    codeInput.maxLength = mySlots;
+    codeInput.placeholder = "0".repeat(mySlots);
+
+    // ==========================================
+    // 2. DEFINICIONES DE DATOS (Items, Habilidades, Mascotas, Logros, BP)
+    // ==========================================
+    const POWER_UPS = [
+        { id: 'shield', name: 'Escudo', cost: 200, desc: 'Bloquea sig. ataque fatal', targeted: false },
+        { id: 'scan', name: 'Escáner', cost: 150, desc: 'Revela 1er dígito', targeted: true },
+        { id: 'virus', name: 'Infección', cost: 180, desc: 'Bloquea atacar 15s', targeted: true },
+        { id: 'sum', name: 'Analizador', cost: 100, desc: 'Suma de dígitos', targeted: true },
+        { id: 'decoy', name: 'Señuelo', cost: 250, desc: 'Da feedback ❌ 1 vez', targeted: false },
+        { id: 'track', name: 'Rastreador', cost: 150, desc: 'Revela últ. dígito', targeted: true },
+        { id: 'reset', name: 'Reiniciar', cost: 300, desc: 'Cambia 1 dígito tuyo', targeted: false },
+        { id: 'bonus', name: 'Bono', cost: 100, desc: 'x2 Cripto al ganar', targeted: false },
+        { id: 'vampire', name: 'Vampiro', cost: 200, desc: 'Roba 30 de energía', targeted: true },
+        { id: 'emp', name: 'PEM', cost: 350, desc: 'Vacía energía del rival', targeted: true },
+        { id: 'haste', name: 'Prisa', cost: 200, desc: 'Recarga x3 energía (10s)', targeted: false },
+        { id: 'scramble', name: 'Mezclar', cost: 250, desc: 'Revuelve tu código', targeted: false },
+        { id: 'ghost', name: 'Fantasma', cost: 400, desc: 'Inmune a escáner', targeted: false },
+        { id: 'oracle', name: 'Oráculo', cost: 150, desc: 'Dice cuántos pares hay', targeted: true },
+        { id: 'jam', name: 'Interferencia', cost: 220, desc: 'Feedback rival será ❓', targeted: true },
+        { id: 'steal', name: 'Ladrón', cost: 300, desc: 'Roba 1 power-up', targeted: true }
+    ];
+
+    const ABILITIES = [
+        { id: 'ab_overclock', name: 'Overclock', cost: 800, cd: 60, desc: '+50 Energía inst.' },
+        { id: 'ab_firewall', name: 'Firewall', cost: 1000, cd: 90, desc: 'Escudo temp 10s' },
+        { id: 'ab_deepscan', name: 'Escaneo Prf.', cost: 1200, cd: 120, desc: 'Revela 1 dígito random' },
+        { id: 'ab_glitch', name: 'Glitch', cost: 1500, cd: 150, desc: '-20 Energía a todos' },
+        { id: 'ab_regen', name: 'Regeneración', cost: 1000, cd: 90, desc: 'Regen x2 por 15s' },
+        { id: 'ab_camo', name: 'Camuflaje', cost: 1200, cd: 180, desc: 'Oculta tus ranuras 30s' }
+    ];
+
+    const MASCOTS = [
+        { id: 'm_logic', name: 'Logic', baseCost: 1500, desc: '+1 Regen Energía/sec por nivel.' },
+        { id: 'm_sirijr', name: 'Siri Jr.', baseCost: 1500, desc: '5% chance/nvl de esquivar.' },
+        { id: 'm_crafty', name: 'Crafty', baseCost: 1500, desc: '10% chance/nvl de ganar 10 HC al atacar.' },
+        { id: 'm_mistral', name: 'Mistral Jr.', baseCost: 1500, desc: '+10 Energía Max por nivel.' },
+        { id: 'm_eitubot', name: 'Eitubot', baseCost: 1500, desc: '5% chance/nvl reflejar Interferencia.' },
+        { id: 'm_nova', name: 'Nova', baseCost: 1500, desc: 'Avisa si bajas de 20 energía (Chat).' },
+        { id: 'm_proton', name: 'Proton', baseCost: 1500, desc: '-2 coste de hackeo por nivel.' },
+        { id: 'm_llama', name: 'Llama Jr.', baseCost: 1500, desc: '+5% XP por nivel al terminar partida.' }
+    ];
+
+    const ACHIEVEMENTS = [
+        { id: 'a_first', name: 'First Blood', desc: 'Juega tu primera partida.' },
+        { id: 'a_win1', name: 'Hacker Novato', desc: 'Gana 1 partida.' },
+        { id: 'a_win10', name: 'Hacker Pro', desc: 'Gana 10 partidas.' },
+        { id: 'a_rich', name: 'Millonario', desc: 'Acumula 5000 HC.' },
+        { id: 'a_shield', name: 'Escudero', desc: 'Usa un Escudo.' },
+        { id: 'a_overclock', name: 'Energía Infinita', desc: 'Usa habilidad Overclock.' },
+        { id: 'a_pet1', name: 'Coleccionista', desc: 'Compra 1 Mascota IA.' },
+        { id: 'a_pet3', name: 'Zoológico de IAs', desc: 'Equipa 3 Mascotas.' },
+        { id: 'a_bp10', name: 'Pase Máximo', desc: 'Alcanza el Nivel 10 del Pase.' },
+        { id: 'a_slot7', name: 'Largo Alcance', desc: 'Mejora a 7 Ranuras.' },
+        { id: 'a_pacifist', name: 'Pacifista', desc: 'Gana sin usar Power-ups.' },
+        { id: 'a_close', name: 'Casi Caigo', desc: 'Gana con menos de 10 Energía.' }
+    ];
+
+    const BATTLE_PASS = [
+        { lvl: 1, reward: '50 HC', type: 'hc', val: 50 },
+        { lvl: 2, reward: 'Escudo Gratis', type: 'item', val: 'shield' },
+        { lvl: 3, reward: '100 HC', type: 'hc', val: 100 },
+        { lvl: 4, reward: 'Señuelo Gratis', type: 'item', val: 'decoy' },
+        { lvl: 5, reward: '500 HC', type: 'hc', val: 500 },
+        { lvl: 6, reward: 'PEM Gratis', type: 'item', val: 'emp' },
+        { lvl: 7, reward: '1000 HC', type: 'hc', val: 1000 },
+        { lvl: 8, reward: 'Fantasma Gratis', type: 'item', val: 'ghost' },
+        { lvl: 9, reward: '2000 HC', type: 'hc', val: 2000 },
+        { lvl: 10, reward: 'MEJORA RANURA GRATIS', type: 'slot', val: 1 }
+    ];
+
+    // ==========================================
+    // 3. MOTOR SFX Y ENERGÍA
+    // ==========================================
+    let audioCtx;
+    function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    function playTone(freq, type, duration, vol=0.1) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+        osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + duration);
+    }
+    const sfx = {
+        click: () => { initAudio(); playTone(600, 'sine', 0.1, 0.05); },
+        buy: () => { initAudio(); playTone(880, 'sine', 0.2, 0.1); },
+        power: () => { initAudio(); playTone(440, 'sawtooth', 0.3, 0.05); },
+        hack: () => { initAudio(); playTone(400, 'square', 0.15, 0.05); },
+        elim: () => { initAudio(); playTone(200, 'square', 0.6, 0.1); },
+        win: () => { initAudio(); [523, 659, 783, 1046].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.4, 0.1), i*150)); },
+        error: () => { initAudio(); playTone(150, 'sawtooth', 0.2, 0.1); },
+        achieve: () => { initAudio(); [880, 1046, 1318].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.2, 0.1), i*100)); }
+    };
+    document.addEventListener('click', (e) => { if(e.target.tagName === 'BUTTON') sfx.click(); });
+
+    let energy = 100, maxEnergy = 100, rechargeRate = 10, energyInterval;
+    let abCooldowns = {}; // Almacena timers de cooldowns
+
+    function startEnergySystem() {
+        // Aplicar buffs de mascotas
+        maxEnergy = 100; rechargeRate = 10;
+        if(equippedMascots.includes('m_mistral')) maxEnergy += (10 * myMascots['m_mistral']);
+        energy = maxEnergy; 
+        updateEnergyUI();
+        
+        if(energyInterval) clearInterval(energyInterval);
+        energyInterval = setInterval(() => {
+            if (energy < maxEnergy && !myData.eliminated) {
+                let actualRecharge = rechargeRate;
+                if(equippedMascots.includes('m_logic')) actualRecharge += (1 * myMascots['m_logic']);
+                energy = Math.min(maxEnergy, energy + actualRecharge);
+                updateEnergyUI();
+            }
+        }, 1000);
+    }
+    function updateEnergyUI() {
+        const p = (energy / maxEnergy) * 100;
+        document.getElementById('energy-bar').style.width = p + '%';
+        document.getElementById('energy-text').innerText = `ENERGÍA: ${energy}/${maxEnergy}`;
+    }
+
+    // ==========================================
+    // 4. SISTEMAS NUEVOS: LOGROS, BP, TIENDA TABS
+    // ==========================================
+    function unlockAchievement(id) {
+        if(!achievementsData[id]) {
+            achievementsData[id] = true;
+            localStorage.setItem('htc_achievements', JSON.stringify(achievementsData));
+            sfx.achieve();
+            const ach = ACHIEVEMENTS.find(a=>a.id===id);
+            displayChat("SISTEMA", `🏆 LOGRO DESBLOQUEADO: ${ach.name}`);
+        }
+    }
+    
+    function checkPassiveAchievements() {
+        if(crypto >= 5000) unlockAchievement('a_rich');
+        if(myMascots && Object.keys(myMascots).length >= 1) unlockAchievement('a_pet1');
+        if(equippedMascots.length === 3) unlockAchievement('a_pet3');
+        if(bpLevel >= 10) unlockAchievement('a_bp10');
+        if(mySlots >= 7) unlockAchievement('a_slot7');
+    }
+
+    function openAchievements() {
+        checkPassiveAchievements();
+        document.getElementById('achievements-overlay').classList.remove('hidden');
+        document.getElementById('achievements-modal').classList.remove('hidden');
+        const list = document.getElementById('achievements-list');
+        list.innerHTML = ACHIEVEMENTS.map(a => {
+            const unl = achievementsData[a.id];
+            return `<div class="achieve-card ${unl?'unlocked':''}">
+                <div><strong>${a.name}</strong><br><span style="font-size:0.8em">${a.desc}</span></div>
+                <div>${unl?'✅':'🔒'}</div>
+            </div>`;
+        }).join('');
+    }
+    function closeAchievements() { document.getElementById('achievements-overlay').classList.add('hidden'); document.getElementById('achievements-modal').classList.add('hidden'); }
+
+    function openBP() {
+        document.getElementById('bp-overlay').classList.remove('hidden');
+        document.getElementById('bp-modal').classList.remove('hidden');
+        renderBP();
+    }
+    function closeBP() { document.getElementById('bp-overlay').classList.add('hidden'); document.getElementById('bp-modal').classList.add('hidden'); }
+    function renderBP() {
+        document.getElementById('bp-lvl-display').innerText = bpLevel;
+        const list = document.getElementById('bp-tiers');
+        list.innerHTML = BATTLE_PASS.map(b => {
+            let statusClass = "bp-tier";
+            let btn = "";
+            if(claimedBP.includes(b.lvl)) {
+                statusClass += " claimed"; btn = "RECLAMADO";
+            } else if (bpLevel >= b.lvl) {
+                statusClass += " available"; btn = `<button onclick="claimBP(${b.lvl})">RECLAMAR</button>`;
+            } else { btn = `🔒 Req. Nivel ${b.lvl}`; }
+            return `<div class="${statusClass}"><strong>Nivel ${b.lvl}:</strong> ${b.reward} <span style="float:right">${btn}</span></div>`;
+        }).join('');
+    }
+    function claimBP(lvl) {
+        if(claimedBP.includes(lvl) || bpLevel < lvl) return;
+        const reward = BATTLE_PASS.find(b=>b.lvl===lvl);
+        if(reward.type === 'hc') { crypto += reward.val; }
+        else if (reward.type === 'item') { myInventory.push(reward.val); }
+        else if (reward.type === 'slot') { mySlots++; codeInput.maxLength = mySlots; document.getElementById('slots-count').innerText = mySlots; localStorage.setItem('htc_slots', mySlots); unlockAchievement('a_slot7'); }
+        
+        claimedBP.push(lvl);
+        localStorage.setItem('htc_crypto', crypto);
+        localStorage.setItem('htc_claimedBP', JSON.stringify(claimedBP));
+        document.getElementById('crypto-count').innerText = crypto;
+        sfx.buy(); renderBP(); alert(`Reclamaste: ${reward.reward}`);
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        const content = document.getElementById('shop-content');
+        content.innerHTML = "";
+        
+        if (tab === 'powers') {
+            content.innerHTML = POWER_UPS.map(p => `<div class="shop-item" onclick="buyPower('${p.id}')"><strong>${p.name}</strong><br>${p.desc}<br><span style="color:var(--gold)">${p.cost} HC</span></div>`).join('');
+        } else if (tab === 'skills') {
+            content.innerHTML = ABILITIES.map(a => {
+                let owned = myAbilities.includes(a.id);
+                return `<div class="shop-item" style="border-color:orange;" onclick="${owned?'':'buyAbility(\''+a.id+'\')'}">
+                <strong>${a.name}</strong><br>${a.desc}<br>CD: ${a.cd}s<br>
+                ${owned?'<span style="color:green">Comprado</span>':'<span style="color:var(--gold)">'+a.cost+' HC</span>'}</div>`;
+            }).join('');
+        } else if (tab === 'mascots') {
+            content.innerHTML = MASCOTS.map(m => {
+                let lvl = myMascots[m.id] || 0;
+                let cost = m.baseCost * (lvl + 1);
+                let eq = equippedMascots.includes(m.id) ? '<div class="equipped-badge">Eq</div>' : '';
+                return `<div class="shop-item" style="border-color:#bf00ff;" onclick="interactMascot('${m.id}')">
+                ${eq}<strong>${m.name} (Nv ${lvl})</strong><br>${m.desc}<br>
+                <button style="font-size:0.7em; padding:2px;">Mejorar (${cost} HC)</button>
+                <button style="font-size:0.7em; padding:2px;" onclick="event.stopPropagation(); toggleEquipMascot('${m.id}')">${equippedMascots.includes(m.id)?'Desequipar':'Equipar'}</button></div>`;
+            }).join('');
+        } else if (tab === 'upgrades') {
+            content.innerHTML = `<div class="shop-item" style="border-color:cyan;" onclick="buySlotUpgrade()"><strong>+1 Ranura de Código</strong><br>Dificulta que te hackeen.<br><span style="color:var(--gold)">1500 HC</span></div>`;
+        }
+    }
+
+    // Compras
+    function buyPower(id) {
+        let p = POWER_UPS.find(i=>i.id===id);
+        if(crypto >= p.cost) { crypto -= p.cost; myInventory.push(p.id); saveCrypto(); sfx.buy(); alert("Comprado!"); } else alert("Sin fondos.");
+    }
+    function buyAbility(id) {
+        let a = ABILITIES.find(i=>i.id===id);
+        if(crypto >= a.cost && !myAbilities.includes(a.id)) { crypto -= a.cost; myAbilities.push(a.id); localStorage.setItem('htc_abilities', JSON.stringify(myAbilities)); saveCrypto(); sfx.buy(); switchTab('skills'); } else alert("Sin fondos o ya comprado.");
+    }
+    function interactMascot(id) {
+        let m = MASCOTS.find(i=>i.id===id);
+        let lvl = myMascots[m.id] || 0;
+        let cost = m.baseCost * (lvl + 1);
+        if(crypto >= cost) { crypto -= cost; myMascots[m.id] = lvl+1; localStorage.setItem('htc_mascots', JSON.stringify(myMascots)); saveCrypto(); sfx.buy(); switchTab('mascots'); checkPassiveAchievements(); } else alert("Sin fondos.");
+    }
+    function toggleEquipMascot(id) {
+        if(!myMascots[id]) return alert("Primero debes comprar/mejorar la mascota.");
+        if(equippedMascots.includes(id)) { equippedMascots = equippedMascots.filter(i=>i!==id); }
+        else { if(equippedMascots.length >= 3) return alert("Máximo 3 mascotas equipadas."); equippedMascots.push(id); }
+        localStorage.setItem('htc_eq_mascots', JSON.stringify(equippedMascots)); switchTab('mascots'); checkPassiveAchievements();
+    }
+    function buySlotUpgrade() {
+        if(crypto >= 1500) { crypto -= 1500; mySlots++; localStorage.setItem('htc_slots', mySlots); codeInput.maxLength = mySlots; document.getElementById('slots-count').innerText = mySlots; saveCrypto(); sfx.buy(); unlockAchievement('a_slot7'); alert("Ranura añadida!"); } else alert("Sin fondos.");
+    }
+    function saveCrypto() { localStorage.setItem('htc_crypto', crypto); document.getElementById('crypto-count').innerText = crypto; }
+
+    // ==========================================
+    // 5. VARIABLES Y CONEXIÓN (PeerJS + Matchmaking)
+    // ==========================================
+    let peer, conn, connections = [], myId, isHost = false;
+    let myData = { name: '', code: '', slots: mySlots, photo: null, ready: false, eliminated: false, activeShield: false, activeDecoy: false, hasBonus: false, isGhost: false, isJammed: false, usedPowerupsCount: 0 };
+    let players = [];
+
+    function previewPhoto(input) { const file = input.files[0]; if(file) { const reader = new FileReader(); reader.onload = (e) => { myData.photo = e.target.result; document.getElementById('my-photo-preview').src = e.target.result; }; reader.readAsDataURL(file); } }
+
+    function initPeer() { peer = new Peer(); peer.on('error', (err) => { 
+        if(err.type === 'peer-unavailable' && document.getElementById('menu').classList.contains('hidden') === false) {
+            // Auto-matchmaking fallback
+            console.log("Sala no encontrada, creando pública...");
+            hostGame(document.getElementById('join-id').value); 
+        } else { alert("Error: " + err.type); }
+    });}
+
+    function hostGame(forceId = null) {
+        if (!document.getElementById('username').value.trim()) return alert("Nombre requerido.");
+        myData.name = document.getElementById('username').value; isHost = true;
+        peer = forceId ? new Peer(forceId) : new Peer();
+        peer.on('error', (err) => alert("Error al hostear: " + err.type));
+        peer.on('open', (id) => {
+            myId = id; document.getElementById('display-id').innerText = id;
+            document.getElementById('qr-container').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${id}&color=00ff41&bgcolor=000">`;
+            showLobby(); switchTab('powers');
+            addOrUpdatePlayer({ id: myId, name: myData.name, photo: myData.photo, slots: myData.slots, ready: false, eliminated: false });
+        });
+        peer.on('connection', (c) => { c.on('data', (data) => handleData(data, c)); c.on('open', () => { connections.push(c); }); });
+    }
+
+    function joinGame(isAuto = false) {
+        const hostId = document.getElementById('join-id').value.trim();
+        if (!document.getElementById('username').value.trim() || !hostId) return alert("Nombre e ID requeridos.");
+        myData.name = document.getElementById('username').value; initPeer();
+        peer.on('open', (id) => {
+            myId = id; conn = peer.connect(hostId);
+            conn.on('open', () => {
+                conn.send({ type: 'JOIN', id: myId, name: myData.name, photo: myData.photo, slots: myData.slots });
+                document.getElementById('display-id').innerText = hostId; showLobby(); switchTab('powers');
+            });
+            conn.on('data', (data) => handleData(data, conn));
+        });
+    }
+
+    function autoMatchmake() {
+        if (!document.getElementById('username').value.trim()) return alert("Nombre requerido primero.");
+        const randPub = "HTCPUB-" + Math.floor(Math.random()*5);
+        document.getElementById('join-id').value = randPub;
+        joinGame(true); // Intenta unirse, si da error 'peer-unavailable', el evento error llama a hostGame()
+    }
+
+    function showLobby() { document.getElementById('menu').classList.add('hidden'); document.getElementById('lobby').classList.remove('hidden'); }
+
+    function handleData(data, connection) {
+        switch(data.type) {
+            case 'JOIN': addOrUpdatePlayer({ id: data.id, name: data.name, photo: data.photo, slots: data.slots, ready: false, eliminated: false }); broadcast({ type: 'PLAYER_LIST', list: players }); break;
+            case 'PLAYER_LIST': players = data.list; updatePlayerListUI(); break;
+            case 'READY': let pReady = players.find(p => p.id === data.id); if (pReady) { pReady.ready = data.ready; pReady.slots = data.slots; updatePlayerListUI(); checkAllReady(); } break;
+            case 'START_GAME': players = data.list; runGameStart(); break;
+            case 'GUESS': if (data.to === myId) processAttack(data); else if (isHost) { let c = connections.find(cn => cn.peer === data.to); if(c) c.send(data); } break;
+            case 'GUESS_RESULT': if (data.to === myId) handleFeedback(data); else if (isHost) { let c = connections.find(cn => cn.peer === data.to); if(c) c.send(data); } break;
+            case 'POWER_USE': handlePowerEffect(data); break;
+            case 'ELIMINATED': markEliminated(data.playerId); checkWinCondition(); break;
+            case 'CHAT': displayChat(data.name, data.msg); break;
+            case 'GAME_OVER': showVictory(data.winnerId, data.winnerName); break;
+            case 'RESET_GAME': resetToLobby(); break;
+        }
+    }
+
+    // ==========================================
+    // 6. LÓGICA EN JUEGO (Ataque, Habilidades, Mascotas)
+    // ==========================================
+    function processAttack(data) {
+        // Mascota: Siri Jr block
+        if(equippedMascots.includes('m_sirijr')) {
+            let blockChance = 5 * myMascots['m_sirijr'];
+            if(Math.random() * 100 < blockChance) {
+                sendResult(data.from, data.val, Array(myData.slots).fill('🛡️'), false);
+                displayChat("Siri Jr", `¡Bloqueé el ataque de ${data.fromName}!`);
+                return;
+            }
+        }
+
+        if (myData.activeShield) { myData.activeShield = false; sendResult(data.from, data.val, Array(myData.slots).fill('🛡️'), false); return; }
+
+        let res = []; let win = true;
+        for(let i=0; i < myData.slots; i++) {
+            if(data.val[i] === myData.code[i]) res.push('✅'); else { res.push('❌'); win = false; }
+        }
+
+        if (myData.activeDecoy) { myData.activeDecoy = false; res = Array(myData.slots).fill('❌'); win = false; }
+
+        sendResult(data.from, data.val, res, win);
+
+        if (win && !myData.eliminated) {
+            sfx.elim(); myData.eliminated = true;
+            if(isHost) { markEliminated(myId); broadcast({type:'ELIMINATED', playerId:myId}); checkWinCondition(); }
+            else conn.send({type:'ELIMINATED', playerId:myId});
+        }
+    }
+
+    function sendResult(toId, guess, result, isWin) {
+        const d = { type: 'GUESS_RESULT', from: myId, to: toId, guess: guess, result: result };
+        if (isHost) { let c = connections.find(cn => cn.peer === toId); if(c) c.send(d); } else conn.send(d);
+    }
+
+    // Activar Habilidades Permanentes
+    function useAbility(id) {
+        if(abCooldowns[id]) return alert("Habilidad en recarga.");
+        const ab = ABILITIES.find(a=>a.id===id);
+        
+        if(id === 'ab_overclock') { energy = Math.min(maxEnergy, energy+50); updateEnergyUI(); unlockAchievement('a_overclock'); }
+        if(id === 'ab_firewall') { myData.activeShield = true; setTimeout(()=>myData.activeShield=false, 10000); }
+        if(id === 'ab_deepscan') {
+            // Escaneo random a un rival vivo
+            let aliveRivals = players.filter(p=>p.id!==myId && !p.eliminated);
+            if(aliveRivals.length > 0) {
+                let t = aliveRivals[Math.floor(Math.random()*aliveRivals.length)];
+                const d = { type: 'POWER_USE', from: myId, to: t.id, power: 'deepscan_trigger' };
+                if (isHost) handlePowerEffect(d); else conn.send(d);
+            }
+        }
+        if(id === 'ab_glitch') { broadcast({type: 'POWER_USE', from: myId, to: 'ALL', power: 'glitch_trigger'}); if(!isHost) conn.send({type: 'POWER_USE', from: myId, to: 'ALL', power: 'glitch_trigger'}); }
+        if(id === 'ab_regen') { rechargeRate *= 2; setTimeout(()=>rechargeRate /= 2, 15000); }
+        if(id === 'ab_camo') { myData.isGhost = true; setTimeout(()=>myData.isGhost=false, 30000); }
+
+        sfx.power();
+        abCooldowns[id] = true;
+        const btn = document.getElementById(`btn-${id}`); btn.classList.add('cooldown'); btn.innerText = `${ab.name} (${ab.cd}s)`;
+        let left = ab.cd;
+        let intv = setInterval(() => {
+            left--; btn.innerText = `${ab.name} (${left}s)`;
+            if(left<=0) { clearInterval(intv); abCooldowns[id]=false; btn.classList.remove('cooldown'); btn.innerText = ab.name; }
+        }, 1000);
+    }
+
+    // Power-ups
+    function activateInventory(idx) {
+        let id = myInventory[idx];
+        const pDef = POWER_UPS.find(p => p.id === id);
+        if (!pDef.targeted) { usePowerLogic(id, idx, null); } 
+        else {
+            let target = prompt("Escribe el nombre exacto del rival para usar " + pDef.name);
+            let r = players.find(p => p.name === target && p.id !== myId);
+            if(r) usePowerLogic(id, idx, r.id); else alert("Rival no encontrado.");
+        }
+    }
+    function usePowerLogic(typeId, idx, targetId) {
+        myInventory.splice(idx, 1); renderGameBars(); myData.usedPowerupsCount++;
+        
+        if (typeId === 'shield') { myData.activeShield = true; sfx.power(); unlockAchievement('a_shield'); }
+        if (typeId === 'decoy') { myData.activeDecoy = true; sfx.power(); }
+        if (typeId === 'bonus') { myData.hasBonus = true; sfx.power(); }
+        if (typeId === 'ghost') { myData.isGhost = true; sfx.power(); displayChat("SISTEMA", "Eres inmune a escaneos."); }
+        if (typeId === 'haste') { sfx.power(); rechargeRate = 30; setTimeout(() => { rechargeRate = 10; displayChat("SISTEMA", "Prisa terminó."); }, 10000); }
+        if (typeId === 'reset') { sfx.power(); let arr = myData.code.split(''); arr[Math.floor(Math.random()*myData.slots)] = Math.floor(Math.random()*10).toString(); myData.code = arr.join(''); document.getElementById('show-my-code').innerText = myData.code; }
+        if (typeId === 'scramble') { sfx.power(); let arr = myData.code.split(''); arr.sort(() => Math.random() - 0.5); myData.code = arr.join(''); document.getElementById('show-my-code').innerText = myData.code; }
+
+        const pDef = POWER_UPS.find(p => p.id === typeId);
+        if (pDef && pDef.targeted) {
+            const d = { type: 'POWER_USE', from: myId, to: targetId, power: typeId };
+            if (isHost) handlePowerEffect(d); else conn.send(d);
+            sfx.power();
+        }
+    }
+
+    function handlePowerEffect(data) {
+        if (data.to === 'ALL' || data.to === myId) {
+            let info = ""; let chatD = null;
+            
+            // Mascota Eitubot reflect Jam
+            if (data.power === 'jam' && equippedMascots.includes('m_eitubot') && data.to === myId) {
+                if (Math.random()*100 < 5*myMascots['m_eitubot']) {
+                    displayChat("Eitubot", "¡Reflejé la interferencia!");
+                    chatD = { type: 'POWER_USE', from: myId, to: data.from, power: 'jam' };
+                    data.power = 'none'; // Anulo el ataque a mi
+                }
+            }
+
+            if (data.power === 'glitch_trigger') { energy = Math.max(0, energy - 20); updateEnergyUI(); }
+
+            if (data.to === myId && data.power !== 'none') {
+                if (myData.isGhost && ['scan', 'track', 'deepscan_trigger'].includes(data.power)) { info = `${myData.name} es un Fantasma. Falló.`; } 
+                else {
+                    if (data.power === 'virus') { const btn = document.querySelector(`#player-${data.from} button`); if(btn) { btn.disabled = true; setTimeout(() => { if(!myData.eliminated) btn.disabled = false; }, 15000); } }
+                    if (data.power === 'vampire') { energy = Math.max(0, energy - 30); updateEnergyUI(); chatD = { type: 'POWER_USE', from: myId, to: data.from, power: 'vampire_return' }; }
+                    if (data.power === 'emp') { energy = 0; updateEnergyUI(); }
+                    if (data.power === 'jam') { myData.isJammed = true; }
+                    if (data.power === 'scan') info = `1er dígito de ${myData.name}: ${myData.code[0]}`;
+                    if (data.power === 'track') info = `Últ. dígito de ${myData.name}: ${myData.code[myData.slots-1]}`;
+                    if (data.power === 'deepscan_trigger') info = `Un dígito de ${myData.name}: ${myData.code[Math.floor(Math.random()*myData.slots)]}`;
+                    if (data.power === 'sum') info = `Suma de dígitos de ${myData.name}: ${myData.code.split('').reduce((a,b) => parseInt(a)+parseInt(b), 0)}`;
+                    if (data.power === 'oracle') info = `${myData.name} tiene ${myData.code.split('').filter(n => parseInt(n)%2===0).length} números pares.`;
+                    if (data.power === 'steal') {
+                        if (myInventory.length > 0) { let idx = Math.floor(Math.random() * myInventory.length); let stolen = myInventory.splice(idx, 1)[0]; renderGameBars(); chatD = { type: 'POWER_USE', from: myId, to: data.from, power: 'steal_return', extra: stolen }; } 
+                        else { info = `${myData.name} no tiene power-ups para robar.`; }
+                    }
+                }
+            }
+
+            if (info) {
+                const msg = { type: 'CHAT', name: 'SISTEMA', msg: info };
+                if (isHost) { let c = connections.find(cn => cn.peer === data.from); if(c) c.send(msg); else if(data.from === myId) displayChat("SISTEMA", info); } 
+                else conn.send({type: 'CHAT', name: 'SISTEMA', msg: info}); // Simplificado broadcast
+            }
+            if (chatD) { if(isHost) { let c = connections.find(cn=>cn.peer===data.from); if(c) c.send(chatD); } else conn.send(chatD); }
+
+        } else if (data.to === myId && data.power.includes('_return')) {
+            if (data.power === 'vampire_return') { energy = Math.min(maxEnergy, energy + 30); updateEnergyUI(); }
+            if (data.power === 'steal_return') { myInventory.push(data.extra); renderGameBars(); displayChat("SISTEMA", `Has robado un power-up.`); }
+        } else if (isHost && data.to !== 'ALL') { let c = connections.find(cn => cn.peer === data.to); if(c) c.send(data); }
+    }
+
+    // ==========================================
+    // 7. RENDERIZADOS Y ESTADOS DE PARTIDA
+    // ==========================================
+    function updatePlayerListUI() {
+        const list = document.getElementById('player-list');
+        list.innerHTML = players.map(p => `<div>${p.photo ? `<img src="${p.photo}" class="profile-pic">` : ''} ${p.name} (L:${p.slots||6}) ${p.ready ? "<span class='ready-text'>[LISTO]</span>" : "[Esperando...]"}</div>`).join('');
+    }
+
+    function renderGameBars() {
+        // Inventario
+        document.getElementById('inventory-bar').innerHTML = myInventory.map((id, idx) => {
+            const p = POWER_UPS.find(item => item.id === id); return `<div class="inv-slot" onclick="activateInventory(${idx})">${p.name}</div>`;
+        }).join('');
+        // Habilidades
+        document.getElementById('abilities-bar').innerHTML = myAbilities.map(id => {
+            const a = ABILITIES.find(item => item.id === id); return `<button id="btn-${id}" class="ability-btn" onclick="useAbility('${id}')">${a.name}</button>`;
+        }).join('');
+        // Mascotas Eq
+        document.getElementById('mascots-bar').innerHTML = equippedMascots.map(id => {
+            const m = MASCOTS.find(item => item.id === id); return `<div class="mascot-display">${m.name} Lv${myMascots[id]}</div>`;
+        }).join('');
+    }
+
+    function runGameStart() {
+        initAudio(); unlockAchievement('a_first'); stats.gamesPlayed++; localStorage.setItem('htc_stats', JSON.stringify(stats));
+        document.getElementById('lobby').classList.add('hidden'); document.getElementById('game-screen').classList.remove('hidden'); document.getElementById('chat-container').classList.remove('hidden');
+        document.getElementById('show-my-code').innerText = myData.code;
+        myData.usedPowerupsCount = 0;
+        startEnergySystem(); renderGameBars(); renderRivals();
+    }
+
+    function renderRivals() {
+        const list = document.getElementById('rivals-list'); list.innerHTML = '';
+        players.forEach(p => {
+            if (p.id === myId) return; const slots = p.slots || 6;
+            const div = document.createElement('div'); div.id = `player-${p.id}`; div.className = 'rival-card card';
+            div.innerHTML = `${p.photo ? `<img src="${p.photo}" class="profile-pic" style="position:absolute; top:5px; right:5px;">` : ''}
+                <p><strong>${p.name}</strong> (L:${slots})</p>
+                <input type="text" id="guess-${p.id}" maxlength="${slots}" placeholder="${'0'.repeat(slots)}" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                <button onclick="sendGuess('${p.id}', ${slots})">HACKEAR</button>
+                <div id="feedback-${p.id}" class="feedback-table"></div>`;
+            list.appendChild(div);
+        });
+    }
+
+    function sendGuess(targetId, targetSlots) {
+        let cost = 30;
+        if(equippedMascots.includes('m_proton')) cost -= (2 * myMascots['m_proton']);
+        if(cost < 0) cost = 0;
+
+        if (energy < cost) { sfx.error(); return alert("No tienes suficiente energía."); }
+        
+        const val = document.getElementById(`guess-${targetId}`).value;
+        if (val.length !== targetSlots) { sfx.error(); return alert(`Requieres ${targetSlots} dígitos.`); }
+        
+        energy -= cost; updateEnergyUI(); sfx.hack();
+
+        // Mascota Crafty (monedas al atacar)
+        if(equippedMascots.includes('m_crafty')) {
+            if(Math.random()*100 < 10*myMascots['m_crafty']) { crypto+=10; saveCrypto(); displayChat('Crafty', '+10 HC!'); }
+        }
+
+        const d = { type: 'GUESS', from: myId, fromName: myData.name, to: targetId, val: val };
+        if (isHost) { if(targetId === myId) processAttack(d); else { let c = connections.find(cn => cn.peer === targetId); if(c) c.send(d); } } 
+        else conn.send(d);
+        document.getElementById(`guess-${targetId}`).value = '';
+    }
+
+    function handleFeedback(data) {
+        let finalResult = data.result;
+        if (myData.isJammed) { finalResult = Array(data.guess.length).fill('❓'); myData.isJammed = false; displayChat("SISTEMA", "¡Interferencia aplicada al feedback!"); }
+
+        const f = document.getElementById(`feedback-${data.from}`);
+        if(f) {
+            let row = document.createElement('div'); row.className = 'feedback-row';
+            row.innerText = `${data.guess} ➔ ${finalResult.join('')}`;
+            f.appendChild(row); f.scrollTop = f.scrollHeight;
+        }
+    }
+
+    function checkWinCondition() {
+        if (!isHost) return;
+        const active = players.filter(p => !p.eliminated);
+        if (active.length === 1) { broadcast({ type: 'GAME_OVER', winnerId: active[0].id, winnerName: active[0].name }); showVictory(active[0].id, active[0].name); }
+    }
+
+    function showVictory(id, name) {
+        if(energyInterval) clearInterval(energyInterval);
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('victory-screen').classList.remove('hidden');
+        document.getElementById('victory-text').innerText = (id === myId) ? "¡SISTEMA HACKEADO COMPLETO! GANASTE" : "GANADOR: " + name;
+        
+        let xpGained = (id === myId) ? 100 : 20;
+        if(equippedMascots.includes('m_llama')) xpGained += Math.floor(xpGained * (0.05 * myMascots['m_llama']));
+
+        if (id === myId) {
+            sfx.win(); trophies++; localStorage.setItem('htc_trophies', trophies);
+            let gain = myData.hasBonus ? 400 : 200; crypto += gain; saveCrypto();
+            document.getElementById('reward-text').innerText = `+1 Trofeo | +${gain} HackerCoins`;
+            
+            stats.gamesWon++; unlockAchievement('a_win1');
+            if(stats.gamesWon >= 10) unlockAchievement('a_win10');
+            if(myData.usedPowerupsCount === 0) unlockAchievement('a_pacifist');
+            if(energy < 10) unlockAchievement('a_close');
+            localStorage.setItem('htc_stats', JSON.stringify(stats));
+        }
+
+        addXP(xpGained);
+        if(isHost) document.getElementById('btn-play-again').classList.remove('hidden');
+    }
+
+    function addXP(amount) {
+        xp += amount;
+        while(xp >= 1000) { xp -= 1000; bpLevel++; sfx.achieve(); alert(`¡Nivel de Pase de Batalla: ${bpLevel}!`); }
+        localStorage.setItem('htc_xp', xp); localStorage.setItem('htc_bpLevel', bpLevel);
+        document.getElementById('bp-level-ui').innerText = bpLevel;
+        document.getElementById('xp-bar').style.width = (xp / 1000 * 100) + '%';
+        document.getElementById('xp-text').innerText = `XP: ${xp}/1000`;
+    }
+
+    // ==========================================
+    // 8. UTILIDADES
+    // ==========================================
+    function broadcast(d) { connections.forEach(c => c.send(d)); }
+    function addOrUpdatePlayer(p) { let e = players.find(x => x.id === p.id); if(e) { e.ready = p.ready; e.photo = p.photo; e.slots = p.slots; } else players.push(p); updatePlayerListUI(); }
+    function toggleReady() {
+        if(document.getElementById('my-secret-code').value.length !== mySlots) return alert(`Ingresa exactamente ${mySlots} dígitos.`);
+        myData.code = document.getElementById('my-secret-code').value; myData.ready = true; myData.slots = mySlots; document.getElementById('ready-btn').disabled = true;
+        if(isHost) { let me = players.find(p=>p.id===myId); me.ready=true; me.slots=mySlots; updatePlayerListUI(); checkAllReady(); }
+        else conn.send({type:'READY', id:myId, ready:true, slots:mySlots});
+    }
+    function checkAllReady() { if(isHost && players.length >= 2 && players.every(p=>p.ready)) { broadcast({type:'START_GAME', list:players}); runGameStart(); } }
+
+    function openTutorial() { document.getElementById('tutorial-overlay').classList.remove('hidden'); document.getElementById('tutorial-modal').classList.remove('hidden'); }
+    function closeTutorial() { document.getElementById('tutorial-overlay').classList.add('hidden'); document.getElementById('tutorial-modal').classList.add('hidden'); }
+
+    function sendChatMessage() {
+        const m = document.getElementById('chat-input').value; if(!m) return; displayChat("Tú", m);
+        if(isHost) broadcast({type:'CHAT', name:myData.name, msg:m}); else conn.send({type:'CHAT', name:myData.name, msg:m});
+        document.getElementById('chat-input').value = '';
+    }
+    function displayChat(n, m) { const b = document.getElementById('chat-box'); b.innerHTML += `<div><strong>${n}:</strong> ${m}</div>`; b.scrollTop = b.scrollHeight; }
+    
+    function markEliminated(id) { let p = players.find(x => x.id === id); if(p) p.eliminated = true; const el = document.getElementById(`player-${id}`); if(el) el.classList.add('eliminated'); }
+
+    function playAgain() { broadcast({type:'RESET_GAME'}); resetToLobby(); }
+    function resetToLobby() {
+        if(energyInterval) clearInterval(energyInterval);
+        document.getElementById('victory-screen').classList.add('hidden'); document.getElementById('game-screen').classList.add('hidden'); document.getElementById('lobby').classList.remove('hidden');
+        document.getElementById('ready-btn').disabled = false;
+        myData.ready = false; myData.eliminated = false; myData.isGhost = false; myData.isJammed = false; abCooldowns = {};
+        players.forEach(p => { p.ready = false; p.eliminated = false; });
+        updatePlayerListUI(); switchTab('powers');
+    }
+</script>
+</body>
+</html>
